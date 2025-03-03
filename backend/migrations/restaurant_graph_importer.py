@@ -486,7 +486,7 @@ if __name__ == "__main__":
     importer = RestaurantGraphImporter(
         online_data_path=os.path.join(current_dir, "data/online_restaurants.json"),
         dineout_data_path=os.path.join(current_dir, "data/dineout_restaurants.json"),
-        db_name="my_database", 
+        db_name="common_db", 
         host="http://localhost:8529",
         username="root",
         password="zxcv"
