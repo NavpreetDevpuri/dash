@@ -9,53 +9,92 @@ import {
   ListItem,
   ListItemText,
   Typography,
+  IconButton,
 } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
-const SearchPopup = ({ open, onClose }) => {
+const SearchPopup = ({ open, onClose, onSelectConversation }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setResults([]);
+      return;
+    }
+  }, [open]);
 
   useEffect(() => {
     if (query.trim() === '') {
       setResults([]);
       return;
     }
-    const storedConversations = JSON.parse(localStorage.getItem('recentConversations')) || [];
-    const filtered = storedConversations.filter((conv) =>
-      conv.title.toLowerCase().includes(query.toLowerCase())
-    );
-    setResults(filtered);
+    // Gather all messages from localStorage
+    const allResults = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      // messages_<conversationId>
+      if (key.startsWith('messages_')) {
+        const convId = key.replace('messages_', '');
+        const msgs = JSON.parse(localStorage.getItem(key)) || [];
+        msgs.forEach((m) => {
+          if (m.text.toLowerCase().includes(query.toLowerCase())) {
+            allResults.push({
+              conversationId: convId,
+              messageId: m.id,
+              text: m.text,
+            });
+          }
+        });
+      }
+    }
+    setResults(allResults);
   }, [query]);
 
   const handleResultClick = (result) => {
-    console.log('Navigate to conversation:', result.id);
+    // Pass the conversation ID, message ID, and the search term
+    onSelectConversation(result.conversationId, result.messageId, query);
     onClose();
   };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth>
-      <DialogTitle>Search Conversations</DialogTitle>
+      <DialogTitle>
+        Search
+        <IconButton
+          sx={{ position: 'absolute', right: 8, top: 8 }}
+          onClick={onClose}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
       <DialogContent>
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search..."
+          placeholder="Search messages..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           sx={{ mb: 2 }}
         />
         {results.length > 0 ? (
           <List>
-            {results.map((result) => (
-              <ListItem button key={result.id} onClick={() => handleResultClick(result)}>
+            {results.map((result, index) => (
+              <ListItem
+                button
+                key={`${result.conversationId}-${result.messageId}-${index}`}
+                onClick={() => handleResultClick(result)}
+              >
                 <ListItemText
                   primary={
                     <Typography noWrap>
-                      {result.title.length > 30
-                        ? '...' + result.title.substring(0, 30) + '...'
-                        : result.title}
+                      {result.text.length > 40
+                        ? '...' + result.text.substring(0, 40) + '...'
+                        : result.text}
                     </Typography>
                   }
+                  secondary={`Conv ID: ${result.conversationId}`}
                 />
               </ListItem>
             ))}

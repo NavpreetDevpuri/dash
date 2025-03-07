@@ -34,8 +34,6 @@ export async function signUpApi(email, password) {
 
 export async function fetchConversationsApi() {
   await new Promise((resolve) => setTimeout(resolve, 600));
-  // We'll return an empty array for "recent conversation" demonstration
-  // because pinned items are now separate in the UI
   return [];
 }
 
@@ -48,17 +46,17 @@ export async function fetchMessagesApi(conversationId) {
   ];
 }
 
-export async function sendMessageApi(conversationId, message) {
+/**
+ * Now accepts an object { text, attachment } instead of a plain string.
+ */
+export async function sendMessageApi(conversationId, messageObj) {
   await new Promise((resolve) => setTimeout(resolve, 600));
+
+  // We'll return only the bot reply from here, since we show user message immediately.
   return {
-    userMessage: {
-      id: Math.random(),
-      text: message,
-      sender: 'user',
-    },
     botReply: {
       id: Math.random(),
-      text: `You said: "${message}". This is a bot reply.`,
+      text: `You said: "${messageObj.text}". This is a bot reply.`,
       sender: 'bot',
     },
   };

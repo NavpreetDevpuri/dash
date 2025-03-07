@@ -1,5 +1,5 @@
 // src/components/Layout/TopBar.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
@@ -13,6 +13,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SearchPopup from '../SearchPopup';
 import SettingsPopup from '../SettingsPopup';
+import ProfilePopup from '../ProfilePopup';
 
 const TopBar = ({
   sidebarOpen,
@@ -23,7 +24,10 @@ const TopBar = ({
   setOpenSearch,
   openSettings,
   setOpenSettings,
+  onSelectConversation, // NEW: from Layout
 }) => {
+  const [openProfile, setOpenProfile] = useState(false);
+
   return (
     <>
       <AppBar position="static" color="primary" sx={{ m: 0 }}>
@@ -40,7 +44,7 @@ const TopBar = ({
             </IconButton>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton color="inherit">
+            <IconButton color="inherit" onClick={() => setOpenProfile(true)}>
               <AccountCircleIcon />
             </IconButton>
             <IconButton color="inherit" onClick={() => setOpenSettings(true)}>
@@ -52,8 +56,16 @@ const TopBar = ({
           </Box>
         </Toolbar>
       </AppBar>
-      <SearchPopup open={openSearch} onClose={() => setOpenSearch(false)} />
+
+      {/* Updated SearchPopup so it can call onSelectConversation */}
+      <SearchPopup
+        open={openSearch}
+        onClose={() => setOpenSearch(false)}
+        onSelectConversation={onSelectConversation}
+      />
+
       <SettingsPopup open={openSettings} onClose={() => setOpenSettings(false)} />
+      <ProfilePopup open={openProfile} onClose={() => setOpenProfile(false)} />
     </>
   );
 };

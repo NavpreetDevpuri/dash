@@ -4,8 +4,14 @@ import { Box, Typography, IconButton, Dialog, DialogTitle, DialogContent, TextFi
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InfoIcon from '@mui/icons-material/Info';
+import CloseIcon from '@mui/icons-material/Close';
 
-const ConversationHeader = ({ details, onUpdateTitle, onDeleteConversation }) => {
+const ConversationHeader = ({
+  details,
+  onUpdateTitle,
+  onDeleteConversation,
+  isPinned,
+}) => {
   const [editMode, setEditMode] = useState(false);
   const [title, setTitle] = useState(details.title);
   const [openInfo, setOpenInfo] = useState(false);
@@ -27,7 +33,11 @@ const ConversationHeader = ({ details, onUpdateTitle, onDeleteConversation }) =>
           bgcolor: 'background.paper',
         }}
       >
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+          <Typography variant="h6" sx={{ mr: 1 }}>
+            {/* Add an icon before title */}
+            {isPinned ? '⭐' : '💬'}
+          </Typography>
           {editMode ? (
             <TextField
               value={title}
@@ -54,13 +64,28 @@ const ConversationHeader = ({ details, onUpdateTitle, onDeleteConversation }) =>
           <IconButton onClick={onDeleteConversation}>
             <DeleteIcon />
           </IconButton>
-          <IconButton onClick={() => setOpenInfo(true)}>
-            <InfoIcon />
-          </IconButton>
+          {isPinned && (
+            <IconButton onClick={() => setOpenInfo(true)}>
+              <InfoIcon />
+            </IconButton>
+          )}
         </Box>
       </Box>
-      <Dialog open={openInfo} onClose={() => setOpenInfo(false)}>
-        <DialogTitle>Conversation Info</DialogTitle>
+      <Dialog
+        open={openInfo}
+        onClose={() => setOpenInfo(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <Box sx={{ position: 'relative' }}>
+          <DialogTitle>Conversation Info</DialogTitle>
+          <IconButton
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            onClick={() => setOpenInfo(false)}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
         <DialogContent>
           <Typography variant="body1">{details.content}</Typography>
         </DialogContent>

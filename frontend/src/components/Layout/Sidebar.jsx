@@ -15,8 +15,9 @@ import {
   Button,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 
-// Hardcoded pinned items with icons and counts
 const pinnedItems = [
   { id: 1, label: 'Food order', icon: '🍔', count: 1 },
   { id: 2, label: 'Dineout booking', icon: '🍽️', count: 2 },
@@ -30,20 +31,22 @@ const Sidebar = ({
   onSelectConversation,
   recentConversations,
   onEditConversation,
+  onDeleteConversation,
 }) => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingConv, setEditingConv] = useState(null);
   const [newTitle, setNewTitle] = useState('');
 
-  const handleEditClick = (conv) => {
+  const handleEditClick = (conv, e) => {
+    e.stopPropagation();
     setEditingConv(conv);
     setNewTitle(conv.title || conv.label);
     setEditDialogOpen(true);
   };
 
-  const handleEditSave = () => {
-    onEditConversation(editingConv.id, newTitle);
-    setEditDialogOpen(false);
+  const handleDeleteClick = (conv, e) => {
+    e.stopPropagation();
+    onDeleteConversation(conv.id);
   };
 
   return (
@@ -59,7 +62,7 @@ const Sidebar = ({
         p: 0,
       }}
     >
-      {/* Pinned Items Block */}
+      {/* Pinned Items */}
       <Box
         sx={{
           flexShrink: 0,
@@ -77,30 +80,19 @@ const Sidebar = ({
                 selected={item.id === selectedId}
                 onClick={() => onSelectConversation(item.id)}
                 secondaryAction={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        backgroundColor: 'secondary.main',
-                        borderRadius: '50%',
-                        padding: '4px',
-                        minWidth: 24,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {item.count}
-                    </Typography>
-                    <IconButton
-                      edge="end"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(item);
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      backgroundColor: 'secondary.main',
+                      borderRadius: '50%',
+                      padding: '4px',
+                      minWidth: 24,
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {item.count}
+                  </Typography>
                 }
               >
                 <ListItemText primary={`${item.icon} ${item.label}`} />
@@ -110,20 +102,21 @@ const Sidebar = ({
           ))}
         </List>
       </Box>
-      {/* Recent Conversations Block */}
+
+      {/* Recent Conversations Header */}
+      <Box sx={{ pl: 2, py: 1, borderTop: '1px solid #444' }}>
+        <Typography variant="subtitle1">Recent Conversations</Typography>
+      </Box>
+
+      {/* Recent Conversations List */}
       <Box
         sx={{
           flexGrow: 1,
           overflowY: 'auto',
-          mt: 2,
-          borderTop: '1px solid #444',
           '&::-webkit-scrollbar': { width: 8, backgroundColor: '#222' },
           '&::-webkit-scrollbar-thumb': { backgroundColor: '#555' },
         }}
       >
-        <Box sx={{ pl: 2, py: 1 }}>
-          <Typography variant="subtitle1">Recent Conversations</Typography>
-        </Box>
         <List>
           {recentConversations && recentConversations.length > 0 ? (
             recentConversations.map((conv) => (
@@ -132,20 +125,39 @@ const Sidebar = ({
                   button
                   selected={conv.id === selectedId}
                   onClick={() => onSelectConversation(conv.id)}
-                  secondaryAction={
+                  sx={{
+                    // Start of Selection
+                    backgroundColor: conv.id === selectedId ? '#555555' : 'inherit',
+                    '&:hover .hover-icons': { opacity: 1, visibility: 'visible' },
+                  }}
+                >
+                  <ListItemText primary={conv.title} />
+                  <Box
+                    className="hover-icons"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      opacity: 0,
+                      visibility: 'hidden',
+                      transition: 'opacity 0.3s',
+                    }}
+                  >
                     <IconButton
                       edge="end"
                       size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClick(conv);
-                      }}
+                      onClick={(e) => handleEditClick(conv, e)}
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
-                  }
-                >
-                  <ListItemText primary={conv.title} />
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      onClick={(e) => handleDeleteClick(conv, e)}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
                 </ListItem>
                 <Divider />
               </React.Fragment>
@@ -157,9 +169,23 @@ const Sidebar = ({
           )}
         </List>
       </Box>
+
       {/* Edit Conversation Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
-        <DialogTitle>Edit Conversation Title</DialogTitle>
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle>
+          Edit Conversation Title
+          <IconButton
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            onClick={() => setEditDialogOpen(false)}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
@@ -176,7 +202,13 @@ const Sidebar = ({
             }}
           >
             <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={handleEditSave}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                onEditConversation(editingConv.id, newTitle);
+                setEditDialogOpen(false);
+              }}
+            >
               Save
             </Button>
           </Box>

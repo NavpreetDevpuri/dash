@@ -67,5 +67,64 @@ update with below details, read properly and think hardly and give me updates co
 THINK HARD
 
 
+update with below details, read properly and think hardly and give me updates codes
 
-      
+--- 
+
+- No need for an edit icon or delete options for pinned conversations.  
+- "Recent Conversations" should not scroll with other conversations; keep it like a header for the scroll area.  
+- Pinned conversations are showing the wrong title; it should also include an icon before it, and the "more info" icon popup should be a little wider.  
+- Chatroom scroll is still not working.  
+- The chatroom input box should allow multi-line input.  
+- Speech-to-text does not have any indication of when it starts or stops, and it is closing automatically after a few seconds if I don’t speak. It also listens to only one line; I want it to keep listening until I turn it off.  
+- Attachments with proper file icons and names are not showing up on top of the chat input box. After sending messages, they should also appear as a box containing the attachment on top of the message. If possible, for previewable files like images, videos, PDFs, etc., show a proper preview, and clicking on it should open a large popup.  
+- All the popups are not having a close icon.  
+- The conversation edit popup should be wider.  
+- There should be a delete icon for non-pinned conversations as well. The top bar for conversations should also be shown for those, but no need for an info icon.  
+- In settings, models should be on the left side, with the dropdown and API key on the right side.  
+- In settings, add "Memories" on the left side, and on the right side, show a list of memories fetched from a dummy API with options to edit and delete.  
+- The search function is still not working. It should search messages and display a list of matching messages. Clicking on a result should open the conversation containing that message and display it, allowing users to load older or newer messages from that point, similar to WhatsApp or Facebook Messenger.
+------
+
+THINK HARD AND TAKE YOUR TIME
+
+
+
+
+update with below details, read properly and think hardly and give me updates codes
+
+-------
+
+- the search botton is not working, when i type something it should show to everywhere suppose when i say "hello", it should capture and find out from all the chat room, rcent conversation or new message where "hello" word has. For example: consider whatsapp sreenshot which i have attached for this.
+- profile button is not working, under the profile icon, it should have name, phone number, email.
+- on middle top "conversation 123..." and edit, delete, they should not be there, remove it.
+- all the conversation under the recent conversation should have delete button icon next to edit icon, delete and edit can only see when i hover on the conversation title otherwise dont show it.
+- also keep same background but little light colour from background theme in "type your message" box, it shouldnot be white. and words which we are gona type should be all white, all the words should be white and dont keep "blue" colour when i send the message, it should be same colour like agent replied colour. Keep agent replied colour same as background theme.
+- when i select some files or docs to upload, it should be visible on the chatbox whether it is succesfully uploaded on it before sending it same like chatgpt 
+- when we talk by clicking on the mic, it should show like recording audio line like chatgpt. Also, there should be different icon to stop it. 
+- memory under the memories in the settings should have "edit" and "delete" icons on right side and it should work delet and edit
+- when i click on "save" icon one notification should pop-up like "successfully save" in select model information unbder the models 
+- purple colour should be round which are available on right side of "food order, dineout booking etc". When i click on "1" or "2" it should show the status of them. It can also have the conversation below the status like when i click on "food order 1" it should show in the conversation top like "your food is preparing..." and under it should have conversation where agent and user start can have converstion like agent "your food is preparing and it will be deliver within 10 mins" and user response "thanks for the update"
+- when we have long conversation, it is still showing white on the left side, it should be same colour like black and type box shouldn't scroll down, it should be the same where it is, only conversation can scroll up and down how long it is. See the screenshot attachment for your reference
+
+------
+
+THINK HARD AND TAKE YOUR TIME
+
+
+update with below details, read properly and think hardly and give me updates codes
+
+------
+
+- memory is not deleting when we delete it, it keeps coming. Also, add different to add new memory
+- ther are should be "edit" and "update" icon should be there for name, phone number and email id. Also, it should save whenever we edit or update any information like name or phone number or email. Write "Phone number" instead of "Phone" and "Email ID" instad of "Email"
+- when we search something in search icon and click on it, it should open that chat. Suppose i serach "Hi" and many chats came that has "hi" and i click on any chat and that chat should open.
+- when we click on any chat under recent conversations, it should highlight with little colour change so it will know which conversation or chat i open
+- keep background theme little light, it is very dark
+- when we click on attach file icon, it should say "Upload files or more" and when we click on mic and start saying something it should be live, it should not be slow, whenenver we speak everything should write down in live on chatbox
+- file, mic, send icons etc, make it white
+
+THINK HARD AND TAKE YOUR TIME
+
+find . -type d -name node_modules -prune -o -type f \( -name "*.js" -o -name "*.jsx" -o -name "*.css" \) -exec echo "{}" \; -exec cat "{}" \;
+
