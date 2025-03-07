@@ -1,0 +1,74 @@
+{
+    "dineout_places": {
+      "likes": [
+        "rooftop ambience",
+        "outdoor seating",
+        "beautiful view",
+        "sunset view",
+        "magnificent view",
+        "breathtaking view",
+        "royal ambience",
+        "elegant decor",
+        "classy place",
+        "romantic setting",
+        "candle light dinner",
+        "private dining room",
+        "calm & cozy atmosphere",
+        "attentive staff",
+        "comfortable seating",
+        "valet service",
+        "courteous staff",
+        "exceptional service"
+      ],
+      "dislikes": [
+        "live music",
+        "dj",
+        "dance floor",
+        "bollywood nights",
+        "loud peppy music",
+        "bar counter",
+        "fairly priced beers",
+        "breweed beer",
+        "hookah",
+        "sheesha",
+        "happy hour offers",
+        "live sports screening",
+        "best pub",
+        "sporty ambience",
+        "bar games"
+      ]
+    },
+    "food": {
+      "likes": [
+        "veg",
+        "vegetarian",
+        "paneer",
+        "healthy",
+        "ghee",
+        "pizza",
+        "dry fruits",
+        "fruits",
+        "home-cooked",
+        "juices",
+        "smoothies",
+        "milk-based",
+        "south indian",
+        "north indian",
+        "mild spicy",
+        "sweets"
+      ],
+      "dislikes": [
+        "non-veg",
+        "non-vegetarian",
+        "oily",
+        "greasy",
+        "unhealthy junk",
+        "overly spicy",
+        "soft",
+        "artificially flavored snacks",
+        "alcoholic",
+        "heavy cream-based dishes"
+      ]
+    }
+  }
+  

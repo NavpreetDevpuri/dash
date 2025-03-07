@@ -1,0 +1,13 @@
+---
+description: This is the project's tech stack
+globs: 
+alwaysApply: false
+---
+# Technical stack
+
+- Python Flask for the backend (using langchain, Langgraph)
+- ReactJS with material ui for the frontend
+- Websocket for chatroom
+- Arangodb databases, never JSON file storage
+- Separate databases for dev, test, and prod
+- Python tests

@@ -9,3 +9,4 @@ wtforms
 email_validator
 python-arango
 flask_socketio
+nx_arangodb

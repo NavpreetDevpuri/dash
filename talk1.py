@@ -1,3 +1,4 @@
+import json
 import os
 from arango import ArangoClient
 from langchain_openai import ChatOpenAI
@@ -13,15 +14,15 @@ import nx_arangodb as nxadb
 os.environ["DATABASE_HOST"] = "http://localhost:8529"
 os.environ["DATABASE_USERNAME"] = "root"
 os.environ["DATABASE_PASSWORD"] = "zxcv"
-os.environ["DATABASE_NAME"] = "my_database"
+os.environ["DATABASE_NAME"] = "user_1235"
 
-G_adb = nxadb.Graph(name="restaurants")
+# G_adb = nxadb.Graph(name="restaurants")
 
-print(G_adb.number_of_nodes(), G_adb.number_of_edges())
+# print(G_adb.number_of_nodes(), G_adb.number_of_edges())
 
 # 1. Connect to ArangoDB
 db_client = ArangoClient(hosts="http://localhost:8529")
-db = db_client.db("my_database", username="root", password="zxcv", verify=True)
+db = db_client.db("user_1235", username="root", password="zxcv", verify=True)
 arango_graph = ArangoGraph(db)
 
 AQL_GENERATION_TEMPLATE = """Task: Generate an ArangoDB Query Language (AQL) query from a User Input.
@@ -52,8 +53,9 @@ Things you should not do:
 Under no circumstance should you generate an AQL Query that deletes any data whatsoever.
 
 Additional notes:
-- Everything is in Rs currency.
-- The number of "votes" is more important compared to the "rating".
+- you can answer questions about the user's contacts. 
+- you can answer questions about the user's food preferences.
+- you can answer questions about the user's restaurant preferences.
 
 ArangoDB Schema:
 {adb_schema}
@@ -70,7 +72,7 @@ AQL Query:
 @tool
 def text_to_aql_to_text(query: str):
     """
-    This tool translates a Natural Language Query into AQL, executes it, and returns the result.
+    This tool translates a Natural Language Query into AQL, executes it, and returns the result. Even if the query is not related to the user's contacts, food preferences, or restaurant preferences, you can still answer the query.
     """
     llm = ChatOpenAI(temperature=0, model_name="gpt-4o")
     chain = ArangoGraphQAChain.from_llm(
@@ -156,8 +158,8 @@ llm = ChatOpenAI(temperature=0, model_name="gpt-4o")
 tools = [text_to_aql_to_text, text_to_nx_algorithm_to_text]
 agent = create_react_agent(llm, tools)
 
-# print(arango_graph.schema)
+print(json.dumps(arango_graph.schema, indent=2))
 # 5. Query the agent
-query = "i want to eat thali. Can you find it? use text_to_aql_to_text"
+query = "Who is my wife?"
 response = agent.invoke({"messages": [{"role": "user", "content": query}]})
 print(response["messages"][-1].content)

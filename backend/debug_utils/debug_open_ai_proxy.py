@@ -31,6 +31,7 @@ def proxy(path):
 
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     response_headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+    app.logger.info("Response:\n" + pformat(response.json()))
     return Response(response.content, response.status_code, response_headers)
 
 if __name__ == "__main__":
