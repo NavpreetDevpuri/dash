@@ -1,3 +1,11 @@
 pydantic
 celery[arangodb]
 redis
+flask_login
+flask_sqlalchemy 
+flask_bcrypt
+flask_wtf 
+wtforms 
+email_validator
+python-arango
+flask_socketio

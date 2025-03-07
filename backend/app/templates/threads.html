@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <h3>My Threads</h3>
+  {% if threads %}
+    <ul class="collection">
+      {% for thread in threads %}
+        <li class="collection-item">
+          <a href="{{ url_for('chat.thread_chat', thread_id=thread._key) }}">
+            {{ thread.title }}
+          </a>
+          <span class="secondary-content">{{ thread.created_at }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>You have no threads yet. <a href="{{ url_for('chat.create_thread') }}">Create one now!</a></p>
+  {% endif %}
+{% endblock %}

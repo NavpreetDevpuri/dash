@@ -7,10 +7,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 
 class RestaurantGraphImporter:
-    def __init__(self, online_data_path, dineout_data_path,
+    def __init__(self, online_order_data_path, dineout_data_path,
                  db_name="my_database", host="http://localhost:8529",
                  username="root", password="zxcv"):
-        self.online_data_path = online_data_path
+        self.online_data_path = online_order_data_path
         self.dineout_data_path = dineout_data_path
         self.db_name = db_name
         self.host = host
@@ -484,7 +484,7 @@ class RestaurantGraphImporter:
 if __name__ == "__main__":
     current_dir = os.path.dirname(__file__)
     importer = RestaurantGraphImporter(
-        online_data_path=os.path.join(current_dir, "data/online_restaurants.json"),
+        online_order_data_path=os.path.join(current_dir, "data/online_order_restaurants.json"),
         dineout_data_path=os.path.join(current_dir, "data/dineout_restaurants.json"),
         db_name="common_db", 
         host="http://localhost:8529",
