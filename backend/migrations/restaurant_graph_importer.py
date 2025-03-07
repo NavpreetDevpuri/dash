@@ -129,47 +129,15 @@ class RestaurantGraphImporter:
                 seen.add(edge_key)
         return deduped
 
-    @staticmethod
-    def update_restaurant_ratings(ratings_obj):
-        """
-        For each rating type (dining, delivery), compute popularity = rating * reviewCount.
-        Treat nulls as 0.
-        """
-        for key in ["dining", "delivery"]:
-            if key in ratings_obj:
-                r_val = ratings_obj[key].get("rating")
-                reviewCount = ratings_obj[key].get("reviewCount")
-                if r_val is None:
-                    r_val = 0
-                if reviewCount is None:
-                    reviewCount = 0
-                ratings_obj[key]["popularity"] = r_val * reviewCount
-        return ratings_obj
-
-    @staticmethod
-    def update_dish_rating(dish_rating):
-        """
-        For dish rating, if it's a dict with "rating" and "votes", add "popularity" = rating * votes.
-        """
-        if isinstance(dish_rating, dict):
-            rating_value = dish_rating.get("rating")
-            votes = dish_rating.get("votes")
-            if rating_value is None:
-                rating_value = 0
-            if votes is None:
-                votes = 0
-            dish_rating["popularity"] = rating_value * votes
-        return dish_rating
-
     def process_online_restaurant(self, restaurant, index):
-        """Process an online restaurant record."""
+        """Process an online restaurant record without any rating calculations."""
         r_key = self.sanitize(restaurant['name'])
-        ratings_obj = self.update_restaurant_ratings(restaurant.get("ratings", {}))
+        # Use ratings as-is from JSON
         restaurant_doc = {
             "_key": r_key,
             "name": restaurant["name"],
             "opening_hours": restaurant["opening_hours"],
-            "ratings": ratings_obj,
+            "ratings": restaurant.get("ratings", {}),
             "address": restaurant["address"],
             "contact": restaurant["contact"],
             "restaurant_images": restaurant["restaurant_images"],
@@ -232,12 +200,12 @@ class RestaurantGraphImporter:
                         if "dishes" in category:
                             for dish in category["dishes"]:
                                 d_key = self.get_unique_key_local(dish['name'], local_dish_keys)
-                                dish_rating = self.update_dish_rating(dish.get("rating"))
+                                # Use dish rating as provided in the JSON
                                 dishes_docs.append({
                                     "_key": d_key,
                                     "name": dish["name"],
                                     "desc": dish.get("desc"),
-                                    "rating": dish_rating,
+                                    "rating": dish.get("rating", {}),
                                     "price": dish.get("price"),
                                     "item_image_filename": dish.get("item_image_filename"),
                                 })
@@ -280,15 +248,14 @@ class RestaurantGraphImporter:
         }
 
     def process_dineout_restaurant(self, restaurant, index):
-        """Process a dine-out restaurant record."""
+        """Process a dine-out restaurant record without any rating calculations."""
         r_key = self.sanitize(restaurant['name'])
-        ratings_obj = self.update_restaurant_ratings(restaurant.get("ratings", {}))
         restaurant_doc = {
             "_key": r_key,
             "name": restaurant["name"],
             "knownFor": restaurant["knownFor"],
             "opening_hours": restaurant["opening_hours"],
-            "ratings": ratings_obj,
+            "ratings": restaurant.get("ratings", {}),
             "address": restaurant["address"],
             "contact": restaurant["contact"],
             "restaurant_images": restaurant["restaurant_images"],
