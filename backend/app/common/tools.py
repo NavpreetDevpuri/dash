@@ -1,6 +1,28 @@
 from langchain_core.tools import tool
 from langchain_community.chains.graph_qa.arangodb import ArangoGraphQAChain
+from langgraph.types import Command, interrupt
 
+@tool
+def human_confirmation(query: str) -> str:
+    """
+    Use this tool to request human confirmation before sending messages or performing actions.
+    When writing and sending content to someone, always confirm first. The query should include
+    all details about what you're sending, to whom, and the exact content. This applies to emails,
+    messages, channel changes, reservations, or any action requiring approval. Always include the
+    complete content in your confirmation request so the user knows exactly what will be sent.
+    
+    Args:
+        query: A string containing all the details of the action requiring confirmation, including:
+            - The exact content being sent (full message text, email body, etc.)
+            - The recipient(s) (name, email, channel, etc.)
+            - The purpose or context of the action
+            - Any other relevant details (time, date, location, etc.)
+    
+    Returns:
+        The user's response to the confirmation request
+    """
+    human_response = interrupt({"query": query})
+    return human_response["answer"]
 
 @tool
 def get_current_datetime() -> str:
@@ -14,6 +36,7 @@ def get_current_datetime() -> str:
     now = datetime.now()
     formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
     return f"Current date and time: {formatted_datetime}"
+
 
 def public_db_query_factory(model, arango_graph, aql_generation_prompt):
     chain = ArangoGraphQAChain.from_llm(

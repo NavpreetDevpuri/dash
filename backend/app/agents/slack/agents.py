@@ -2,12 +2,15 @@ import uuid
 from typing import Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_core.language_models.chat_models import BaseChatModel
+from langgraph.types import Command, interrupt, PregelTask
 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+
+from app.common.utils import safely_check_interrupts
 
 from prompts import (
     PRIVATE_AQL_GENERATION_PROMPT,
@@ -27,11 +30,12 @@ from tools import (
     private_db_query_factory,
 )
 
-from app.common.tools import public_db_query_factory, get_current_datetime
+from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation
 
 class SlackAgent:
     def __init__(
         self,
+        checkpointer: BaseCheckpointSaver,
         model: BaseChatModel,
         private_db=None,
         public_db=None
@@ -45,7 +49,7 @@ class SlackAgent:
             public_db: ArangoGraph instance for the public database (common restaurant data)
         """
         self.model = model
-        self.checkpointer = MemorySaver()
+        self.checkpointer = checkpointer
         
         # Check if database connections are provided
         if private_db is None or public_db is None:
@@ -76,6 +80,10 @@ class SlackAgent:
 
             We don't like to have options until asked specifically, decide what is best.
             If you don't find any answer from aql queries, then try again with a different more broad query atleast 3 times before giving up.
+
+            * If you write an email or message, use the human_confirmation tool to confirm with the user before sending only if they haven't already confirmed it.
+            * Clearly mention what you are sending when requesting confirmation.
+            * Always try to fill up all the details making sure there are no template messages.
             """
         )
 
@@ -91,6 +99,7 @@ class SlackAgent:
             set_status,
             set_status_with_time,
             get_current_datetime,
+            human_confirmation, 
             private_db_query_factory(self.model, self.private_db, PRIVATE_AQL_GENERATION_PROMPT),
             public_db_query_factory(self.model, self.public_db, PUBLIC_AQL_GENERATION_PROMPT)
         ]
@@ -126,7 +135,7 @@ class SlackAgent:
         return final_message.content
 
 
-    def run_interactive(self, debug=False):
+    def run_interactive(self, thread_id: str, debug=False):
         """
         Run the Slack agent in an interactive loop, allowing users to chat with the agent.
         Press Ctrl+C to exit the loop.
@@ -138,8 +147,6 @@ class SlackAgent:
         print("Type your messages below. Press Ctrl+C to exit.")
         print("-" * 50)
         
-        thread_id = str(uuid.uuid4())
-        
         try:
             while True:
                 user_input = input("\nYou: ")
@@ -149,10 +156,16 @@ class SlackAgent:
                 print("\nProcessing...")
                 
                 if debug:
-                    inputs = {"messages": [HumanMessage(content=user_input)]}
                     config = {"configurable": {"thread_id": thread_id}}
+                    stream_mode = "values"
+
+                    # # Check if there's an ongoing PregelTask that needs user input
+                    if safely_check_interrupts(self.agent_graph, config):
+                        inputs = Command(resume={"answer": user_input})
+                    else:
+                        inputs = {"messages": [HumanMessage(content=user_input)]}
                     
-                    for stream in self.agent_graph.stream(inputs, config, stream_mode="values"):
+                    for stream in self.agent_graph.stream(inputs, config, stream_mode=stream_mode):
                         message = stream["messages"][-1]
                         if isinstance(message, tuple):
                             print(message)
@@ -174,6 +187,12 @@ if __name__ == "__main__":
     from app.common.llm_manager import LLMManager
     from arango import ArangoClient
     from langchain_community.graphs import ArangoGraph
+    import sqlite3
+    from langgraph.checkpoint.sqlite import SqliteSaver
+    
+    # Create a direct sqlite connection instead of using SQLAlchemy
+    conn = sqlite3.connect("checkpoints.sqlite", check_same_thread=False)
+    memory = SqliteSaver(conn)
 
     # Create database connections
     db_client = ArangoClient(hosts="http://localhost:8529")
@@ -182,8 +201,11 @@ if __name__ == "__main__":
     
     # Create and run the Slack agent
     agent = SlackAgent(
+        checkpointer=memory,
         model=LLMManager.get_openai_model(model_name="gpt-4o"),
         private_db=private_db,
         public_db=public_db
     )
-    agent.run_interactive(debug=True) 
+
+
+    agent.run_interactive(thread_id="123", debug=True) 
