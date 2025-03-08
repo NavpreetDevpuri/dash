@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # ArangoDB - Graph Database
+  arangodb:
+    image: arangodb:latest
+    container_name: dash-arangodb
+    ports:
+      - "8529:8529"
+    environment:
+      - ARANGO_ROOT_PASSWORD=zxcv
+    volumes:
+      - arango_data:/var/lib/arangodb3
+      - arango_apps:/var/lib/arangodb3-apps
+    restart: unless-stopped
+    networks:
+      - dash-network
+
+  # Redis - For Celery
+  redis:
+    image: redis:latest
+    container_name: dash-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - dash-network
+
+  # Flask Backend
+  backend:
+    build: .
+    container_name: dash-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ARANGO_URL=http://arangodb:8529
+      - ARANGO_DB_NAME=_system
+      - ARANGO_USERNAME=root
+      - ARANGO_PASSWORD=zxcv
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    depends_on:
+      - arangodb
+      - redis
+    restart: unless-stopped
+    networks:
+      - dash-network
+    command: gunicorn -b 0.0.0.0:5000 --worker-class eventlet -w 1 run:app
+
+  # Celery Worker for Consumer Agents
+  celery:
+    build: .
+    container_name: dash-celery
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ARANGO_URL=http://arangodb:8529
+      - ARANGO_DB_NAME=_system
+      - ARANGO_USERNAME=root
+      - ARANGO_PASSWORD=zxcv
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    depends_on:
+      - arangodb
+      - redis
+      - backend
+    restart: unless-stopped
+    networks:
+      - dash-network
+    command: celery -A app.consumer_agents.celery worker --loglevel=info
+
+  # Celery Beat for Scheduled Tasks
+  celery-beat:
+    build: .
+    container_name: dash-celery-beat
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ARANGO_URL=http://arangodb:8529
+      - ARANGO_DB_NAME=_system
+      - ARANGO_USERNAME=root
+      - ARANGO_PASSWORD=zxcv
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+    depends_on:
+      - arangodb
+      - redis
+      - backend
+    restart: unless-stopped
+    networks:
+      - dash-network
+    command: celery -A app.consumer_agents.celery beat --loglevel=info
+
+  # Frontend React app (for development only)
+  frontend:
+    image: node:16
+    container_name: dash-frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - dash-network
+    command: bash -c "npm install && npm start"
+
+volumes:
+  arango_data:
+  arango_apps:
+
+networks:
+  dash-network:
+    driver: bridge 
