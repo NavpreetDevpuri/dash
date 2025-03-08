@@ -107,21 +107,6 @@ def remove_from_group(group_name: str, participants: List[str]) -> str:
     print(f"TOOL EXECUTION: {payload}")
     return f"Removed {participants} from group '{group_name}'"
 
-
-@tool
-def get_current_datetime() -> str:
-    """
-    Get the current date and time.
-    
-    Returns:
-        The current date and time in a readable format
-    """
-    from datetime import datetime
-    now = datetime.now()
-    formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-    return f"Current date and time: {formatted_datetime}"
-
-
 # Create separate DB query tools for private and public databases
 def private_db_query_factory(model, arango_graph, aql_generation_prompt):
     chain = ArangoGraphQAChain.from_llm(

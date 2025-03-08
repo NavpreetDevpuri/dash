@@ -15,18 +15,21 @@ from prompts import (
 )
 
 from tools import (
-    save_contact,
     send_message,
-    create_group,
-    leave_group,
-    add_to_group,
-    remove_from_group,
+    create_channel,
+    leave_channel,
+    add_to_channel,
+    remove_from_channel,
+    set_channel_topic,
+    create_thread,
+    set_status,
+    set_status_with_time,
     private_db_query_factory,
 )
 
 from app.common.tools import public_db_query_factory, get_current_datetime
 
-class WhatsAppAgent:
+class SlackAgent:
     def __init__(
         self,
         model: BaseChatModel,
@@ -34,11 +37,10 @@ class WhatsAppAgent:
         public_db=None
     ):
         """
-        Initialize the WhatsApp agent with private and public database connections.
+        Initialize the Slack agent with private and public database connections.
         
         Args:
             model: The LLM model to use
-            temperature: The temperature setting for the LLM
             private_db: ArangoGraph instance for the private database (user-specific data)
             public_db: ArangoGraph instance for the public database (common restaurant data)
         """
@@ -57,18 +59,18 @@ class WhatsAppAgent:
     def _create_agent(self):
         """Create the agent with all the necessary tools."""
         system_prompt = SystemMessage(
-            """You are a helpful WhatsApp assistant that can manage contacts, messages, and groups.
-            You can also query databases to find information about contacts, messages, groups, and restaurant information.
+            """You are a helpful Slack assistant that can manage messages, channels, threads, and status.
+            You can also query databases to find information about users, messages, channels, and restaurant information.
             
             You have access to two databases:
-            1. A private database with your WhatsApp data, dineout history, and food preferences.
+            1. A private database with your Slack data, dineout history, and food preferences.
             2. A public database with information about dine-out restaurants and online food ordering options.
             
             Be concise and specific in your responses. Always report exactly what you've done:
-            - State the exact message content you've sent and to whom: "I've sent the message '[message content]' to [recipient name/number]"
-            - Specify the exact contact name and number you've saved: "I've saved the contact '[name]' with phone number '[phone_number]'"
-            - Include the exact group name and participants when creating or modifying groups: "I've created/modified the group '[group_name]' with participants: [participant list]"
+            - State the exact message content you've sent and to whom: "I've sent the message '[message content]' to [channel/user]"
+            - Include the exact channel name and participants when creating or modifying channels: "I've created/modified the channel '[channel_name]' with participants: [participant list]"
             - Provide precise details from database queries: "Here are the results from the database: [query results]"
+            - When setting status, confirm what was set: "I've set your status to '[emoji] [text]' [with/without] expiration"
             
             Avoid ambiguity in your responses. Users should know exactly what actions you've performed.
 
@@ -79,12 +81,15 @@ class WhatsAppAgent:
 
         # Define all tools
         agent_tools = [
-            save_contact,
             send_message,
-            create_group,
-            leave_group,
-            add_to_group,
-            remove_from_group,
+            create_channel,
+            leave_channel,
+            add_to_channel,
+            remove_from_channel,
+            set_channel_topic,
+            create_thread,
+            set_status,
+            set_status_with_time,
             get_current_datetime,
             private_db_query_factory(self.model, self.private_db, PRIVATE_AQL_GENERATION_PROMPT),
             public_db_query_factory(self.model, self.public_db, PUBLIC_AQL_GENERATION_PROMPT)
@@ -123,13 +128,13 @@ class WhatsAppAgent:
 
     def run_interactive(self, debug=False):
         """
-        Run the WhatsApp agent in an interactive loop, allowing users to chat with the agent.
+        Run the Slack agent in an interactive loop, allowing users to chat with the agent.
         Press Ctrl+C to exit the loop.
         
         Args:
             debug: If True, shows detailed message stream for debugging
         """
-        print("WhatsApp Agent Interactive Mode")
+        print("Slack Agent Interactive Mode")
         print("Type your messages below. Press Ctrl+C to exit.")
         print("-" * 50)
         
@@ -158,10 +163,10 @@ class WhatsAppAgent:
                 else:
                     response = self.call_llm(user_input, thread_id)
                 
-                print(f"\nWhatsApp Agent: {response}")
+                print(f"\nSlack Agent: {response}")
                 
         except KeyboardInterrupt:
-            print("\n\nExiting WhatsApp Agent. Goodbye!")
+            print("\n\nExiting Slack Agent. Goodbye!")
         except Exception as e:
             print(f"\nAn error occurred: {str(e)}")
 
@@ -175,10 +180,10 @@ if __name__ == "__main__":
     private_db = ArangoGraph(db_client.db("user_1235", username="root", password="zxcv", verify=True))
     public_db = ArangoGraph(db_client.db("common_db", username="root", password="zxcv", verify=True))
     
-    # Create and run the WhatsApp agent
-    agent = WhatsAppAgent(
+    # Create and run the Slack agent
+    agent = SlackAgent(
         model=LLMManager.get_openai_model(model_name="gpt-4o"),
         private_db=private_db,
         public_db=public_db
     )
-    agent.run_interactive(debug=True)
+    agent.run_interactive(debug=True) 
