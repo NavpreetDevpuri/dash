@@ -40,7 +40,7 @@ def generate_swagger_spec():
                 "post": {
                     "tags": ["auth"],
                     "summary": "Create a new user account",
-                    "description": "Register a new user with username, email, and password",
+                    "description": "Register a new user with full name, email, and password",
                     "consumes": ["application/json"],
                     "produces": ["application/json"],
                     "parameters": [
@@ -166,9 +166,9 @@ def generate_swagger_spec():
                         "type": "string",
                         "description": "User identifier"
                     },
-                    "username": {
+                    "full_name": {
                         "type": "string",
-                        "description": "User's username"
+                        "description": "User's full name"
                     },
                     "email": {
                         "type": "string",
@@ -178,12 +178,12 @@ def generate_swagger_spec():
             },
             "SignupRequest": {
                 "type": "object",
-                "required": ["username", "email", "password"],
+                "required": ["full_name", "email", "password"],
                 "properties": {
-                    "username": {
+                    "full_name": {
                         "type": "string",
-                        "example": "john_doe",
-                        "description": "User's username"
+                        "example": "John Doe",
+                        "description": "User's full name"
                     },
                     "email": {
                         "type": "string",

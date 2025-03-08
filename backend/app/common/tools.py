@@ -1,28 +1,62 @@
+import json
 from langchain_core.tools import tool
 from langchain_community.chains.graph_qa.arangodb import ArangoGraphQAChain
 from langgraph.types import Command, interrupt
+from typing import Callable
 
-@tool
-def human_confirmation(query: str) -> str:
-    """
-    Use this tool to request human confirmation before sending messages or performing actions.
-    When writing and sending content to someone, always confirm first. The query should include
-    all details about what you're sending, to whom, and the exact content. This applies to emails,
-    messages, channel changes, reservations, or any action requiring approval. Always include the
-    complete content in your confirmation request so the user knows exactly what will be sent.
+def about_me_factory(arango_graph):
+    cache_me_str = None
+    @tool
+    def about_me() -> str:
+        """
+        Use this tool to get information about the user.
+        It contains information about the user's name, age, gender, location, and interests.
+        """
+        nonlocal cache_me_str
+        try:
+            if cache_me_str is None:
+                # Use the provided arango_graph to query the me collection
+                me_doc = arango_graph.db.collection('me').get('me')
+                if me_doc:
+                    cache_me_str = json.dumps(me_doc)
+                    return cache_me_str
+                else:
+                    return "Could not find information about the user."
+            else:
+                return cache_me_str
+        except Exception as e:
+            return f"Error retrieving information about the user: {str(e)}"
     
-    Args:
-        query: A string containing all the details of the action requiring confirmation, including:
-            - The exact content being sent (full message text, email body, etc.)
-            - The recipient(s) (name, email, channel, etc.)
-            - The purpose or context of the action
-            - Any other relevant details (time, date, location, etc.)
+    return about_me
+
+def human_confirmation_factory(query_callback: Callable):
+    @tool
+    def human_confirmation(query: str) -> str:
+        """
+        Use this tool to request human confirmation before sending messages or performing actions.
+        When writing and sending content to someone, always confirm first. The query should include
+        all details about what you're sending, to whom, and the exact content. This applies to emails,
+        messages, channel changes, reservations, or any action requiring approval. Always include the
+        complete content in your confirmation request so the user knows exactly what will be sent.
+
+        When user give some suggestions, always ask for confirmation again with updated query.
+        
+        Args:
+            query: A string containing all the details of the action requiring confirmation, such as:
+                - The exact content being sent (full message text, email body, etc.)
+                - The recipient(s) (name, email, channel, etc.)
+                - The purpose or context of the action
+                - Any other relevant details (time, date, location, etc.)
+                - Use proper markdown formatting to quote the confirmation message.
+        
+        Returns:
+            The user's response to the confirmation request
+        """
+        query_callback(query)
+        human_response = interrupt({"query": query})
+        return human_response["answer"]
     
-    Returns:
-        The user's response to the confirmation request
-    """
-    human_response = interrupt({"query": query})
-    return human_response["answer"]
+    return human_confirmation
 
 @tool
 def get_current_datetime() -> str:

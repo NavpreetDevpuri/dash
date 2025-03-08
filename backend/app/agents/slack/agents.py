@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional
+from typing import Callable, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -11,11 +11,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.common.utils import safely_check_interrupts
-
-from prompts import (
-    PRIVATE_AQL_GENERATION_PROMPT,
-    PUBLIC_AQL_GENERATION_PROMPT
-)
+from app.agents.slack.prompts import PRIVATE_AQL_GENERATION_PROMPT
+from app.common.prompts import PUBLIC_AQL_GENERATION_PROMPT
 
 from tools import (
     send_message,
@@ -30,7 +27,7 @@ from tools import (
     private_db_query_factory,
 )
 
-from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation
+from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory
 
 class SlackAgent:
     def __init__(
@@ -38,7 +35,8 @@ class SlackAgent:
         checkpointer: BaseCheckpointSaver,
         model: BaseChatModel,
         private_db=None,
-        public_db=None
+        public_db=None, 
+        confirmation_callback: Callable = None
     ):
         """
         Initialize the Slack agent with private and public database connections.
@@ -50,6 +48,7 @@ class SlackAgent:
         """
         self.model = model
         self.checkpointer = checkpointer
+        self.confirmation_callback = confirmation_callback
         
         # Check if database connections are provided
         if private_db is None or public_db is None:
@@ -83,7 +82,7 @@ class SlackAgent:
 
             * If you write an email or message, use the human_confirmation tool to confirm with the user before sending only if they haven't already confirmed it.
             * Clearly mention what you are sending when requesting confirmation.
-            * Always try to fill up all the details making sure there are no template messages.
+            * Always try to fill up all the details making sure there are no template messages like [Your Name] or [Company Name]. Always try find information to fill up the template if possible ask the user for it.
             """
         )
 
@@ -99,7 +98,8 @@ class SlackAgent:
             set_status,
             set_status_with_time,
             get_current_datetime,
-            human_confirmation, 
+            human_confirmation_factory(self.confirmation_callback),
+            about_me_factory(self.private_db),
             private_db_query_factory(self.model, self.private_db, PRIVATE_AQL_GENERATION_PROMPT),
             public_db_query_factory(self.model, self.public_db, PUBLIC_AQL_GENERATION_PROMPT)
         ]
@@ -124,9 +124,13 @@ class SlackAgent:
         """
         if thread_id is None:
             thread_id = str(uuid.uuid4())
-            
-        inputs = {"messages": [HumanMessage(content=user_message)]}
+        
         config = {"configurable": {"thread_id": thread_id}}
+
+        if safely_check_interrupts(self.agent_graph, config):
+            inputs = Command(resume={"answer": user_message})
+        else:
+            inputs = {"messages": [HumanMessage(content=user_message)]}
         
         # Get the final response
         result = self.agent_graph.invoke(inputs, config)
@@ -204,8 +208,8 @@ if __name__ == "__main__":
         checkpointer=memory,
         model=LLMManager.get_openai_model(model_name="gpt-4o"),
         private_db=private_db,
-        public_db=public_db
+        public_db=public_db,
+        confirmation_callback=lambda x: print("Agent Asked for confirmation: ", x)
     )
 
-
-    agent.run_interactive(thread_id="123", debug=True) 
+    agent.run_interactive(thread_id="123", debug=False) 

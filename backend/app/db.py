@@ -243,13 +243,13 @@ def setup_user_collections(db):
         current_app.logger.error(f"Error setting up user collections: {str(e)}")
         return False
 
-def create_user_database(user_id, username, password):
+def create_user_database(user_id, email, password):
     """
     Create a user-specific database and an ArangoDB user with access to that database.
     
     Args:
         user_id: User ID from the application
-        username: Username for the ArangoDB user
+        email: Email address to use as ArangoDB username
         password: The hashed user password to use for ArangoDB authentication
         
     Returns:
@@ -268,29 +268,29 @@ def create_user_database(user_id, username, password):
             sys_db.create_database(
                 name=db_name,
                 users=[{
-                    "username": username,
+                    "username": email,
                     "password": password,
                     "active": True
                 }]
             )
             
             # Create ArangoDB user if it doesn't exist
-            if not sys_db.has_user(username):
+            if not sys_db.has_user(email):
                 sys_db.create_user(
-                    username=username,
+                    username=email,
                     password=password,
                     active=True
                 )
                 
             # Grant permissions to the user for their database
             sys_db.update_permission(
-                username=username,
+                username=email,
                 permission='rw',
                 database=db_name
             )
             
             # Set up the collections in the user database
-            db = client.db(db_name, username=username, password=password)
+            db = client.db(db_name, username=email, password=password)
             setup_user_collections(db)
             
             # Store the database info in _system.user_databases
@@ -300,7 +300,7 @@ def create_user_database(user_id, username, password):
             sys_db.collection('user_databases').insert({
                 "user_id": user_id,
                 "db_name": db_name,
-                "username": username,
+                "username": email,
                 "password": password,  # Store the hashed user password
                 "created_at": datetime.datetime.utcnow().isoformat()
             })

@@ -9,7 +9,7 @@ class User(UserMixin):
     def __init__(self, doc):
         self.doc = doc
         self.id = doc['_key']  # Flask-Login uses this as the unique user ID.
-        self.username = doc.get('username')
+        self.full_name = doc.get('full_name')
         self.email = doc.get('email')
         self.password = doc.get('password')
         self.is_admin = doc.get('is_admin', False)
@@ -17,19 +17,19 @@ class User(UserMixin):
     def to_dict(self):
         return {
             'id': self.id,
-            'username': self.username,
+            'full_name': self.full_name,
             'email': self.email,
             'is_admin': self.is_admin
         }
 
     @staticmethod
-    def create(username, email, password_hash, is_admin=False):
+    def create(email, password_hash, full_name=None, is_admin=False):
         # Use the common database to store users
         db = get_db()
         user_doc = {
-            'username': username,
             'email': email,
             'password': password_hash,
+            'full_name': full_name,
             'is_admin': is_admin,
             'created_at': datetime.utcnow().isoformat()
         }
@@ -43,23 +43,6 @@ class User(UserMixin):
         
         return User(user_doc)
 
-    @classmethod
-    def find_by_username(cls, username):
-        """Find a user by username."""
-        try:
-            from app.db import get_system_db
-            db = get_system_db()
-            query = "FOR u IN users FILTER u.username == @username RETURN u"
-            cursor = db.aql.execute(query, bind_vars={'username': username})
-            docs = list(cursor)
-            if docs:
-                return User(docs[0])
-            return None
-        except Exception as e:
-            logging.error(f"Error finding user by username: {str(e)}")
-            logging.error(traceback.format_exc())
-            return None
-            
     @classmethod
     def find_by_email(cls, email):
         """Find a user by email."""

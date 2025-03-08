@@ -1,0 +1,61 @@
+{
+  "full_name": "Navpreet Singh",
+  "email": "navpreetdevpuri@gmail.com", 
+  "phone": "+1 647 981 0768",
+  "dob": "16-02-2000",
+  "marital_status": "married",
+  "marriage_anniversary": "07-12-2017",
+  "address": {
+    "street": "BTM Layout",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "country": "India",
+    "pincode": "560076",
+    "latitude": 2.9096566,
+    "longitude": 77.6114694
+  }, 
+  "work": {
+    "company": "Dash",
+    "designation": "Software Engineer",
+    "department": "Engineering",
+    "location": "Seattle, Washington, United States",
+    "start_date": "01-01-2020",
+    "end_date": "01-01-2024",
+    "description": "I worked at Dash for 4 years as a Software Engineer. I was responsible for developing and maintaining the company's software products."
+  }, 
+  "education": {
+    "school": "IIT Bombay",
+    "degree": "Master of Technology",
+    "field_of_study": "Computer Science and Engineering",
+    "start_date": "01-01-2018",
+    "end_date": "01-01-2022",
+    "description": "I studied Computer Science and Engineering at IIT Bombay for 4 years. I was responsible for developing and maintaining the company's software products."
+  },
+  "hobbies": [
+    "Reading",
+    "Playing Cricket",
+    "Watching Netflix",
+    "Traveling"
+  ],
+  "interests": [
+    "ArangoDB",
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Deep Learning",
+    "Computer Vision"
+  ],
+  "skills": [
+    "ArangoDB",
+    "Python",
+    "Java",
+    "C++",
+    "JavaScript",
+    "React",
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "MySQL",
+    "PostgreSQL",
+    "Docker"
+  ]
+}

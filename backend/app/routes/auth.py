@@ -19,12 +19,8 @@ def signup():
             return jsonify({"error": "Invalid JSON data"}), 400
         
         # Validate input data
-        if not data.get('username') or not data.get('email') or not data.get('password'):
+        if not data.get('full_name') or not data.get('email') or not data.get('password'):
             return jsonify({"error": "Missing required fields"}), 400
-            
-        # Check if username already exists
-        if User.find_by_username(data.get('username')):
-            return jsonify({"error": "Username already taken"}), 400
             
         # Check if email already exists
         if User.find_by_email(data.get('email')):
@@ -34,10 +30,32 @@ def signup():
         hashed_pw = bcrypt.generate_password_hash(data.get('password')).decode('utf-8')
         
         # Create user in the system database
-        user = User.create(username=data.get('username'), email=data.get('email'), password_hash=hashed_pw)
+        user = User.create(email=data.get('email'), 
+                         password_hash=hashed_pw, full_name=data.get('full_name'))
         
         # Create user-specific database and ArangoDB user using the same hashed password
-        if create_user_database(user.id, data.get('username'), hashed_pw):
+        if create_user_database(user.id, data.get('email'), hashed_pw):
+            # Create a "me" document in the user's database
+            try:
+                from app.db import get_db
+                user_db = get_db(user.id)
+                
+                # Create a "me" collection if it doesn't exist
+                if not user_db.has_collection("me"):
+                    user_db.create_collection("me")
+                
+                # Store user's personal information in the "me" document
+                me_doc = {
+                    "_key": "me",
+                    "full_name": data.get('full_name'),
+                    "email": data.get('email'),
+                    "created_at": datetime.datetime.utcnow().isoformat()
+                }
+                user_db.collection("me").insert(me_doc, overwrite=True)
+            except Exception as e:
+                print(f"Error creating 'me' document: {str(e)}")
+                # Continue with signup even if me document creation fails
+            
             return jsonify({"message": "Your account has been created! You can now log in."}), 201
         else:
             return jsonify({"error": "Failed to create user database"}), 500
@@ -70,7 +88,7 @@ def signin():
                 "message": "Login successful",
                 "user": {
                     "id": user.id,
-                    "username": user.username,
+                    "full_name": user.full_name,
                     "email": user.email
                 }
             }), 200
