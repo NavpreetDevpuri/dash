@@ -62,15 +62,10 @@ class ContactsImporter:
         
         # Process work contacts.
         for contact in self.data.get("work_contacts", []):
-            key = self.sanitize(contact["Name"])
+            key = self.sanitize(contact["name"])
             doc = {
                 "_key": key,
-                "name": contact["Name"],
-                "phone": contact["Phone Number"],
-                "dob": contact["Date of Birth"],
-                "marriage_anniversary": contact["Marriage Anniversary"],
-                "email": contact["Email"],
-                "role": contact["Role"]
+                **contact
             }
             self.work_contacts.append(doc)
             
@@ -79,21 +74,16 @@ class ContactsImporter:
                 "_from": "me/me",
                 "_to": f"work_contacts/{key}",
                 "type": "work",
-                "role": contact["Role"]
+                "role": contact["role"]
             }
             self.work_relationships.append(relationship)
         
         # Process personal contacts.
         for contact in self.data.get("personal_contacts", []):
-            key = self.sanitize(contact["Name"])
+            key = self.sanitize(contact["name"])
             doc = {
                 "_key": key,
-                "name": contact["Name"],
-                "phone": contact["Phone Number"],
-                "dob": contact["Date of Birth"],
-                "marriage_anniversary": contact["Marriage Anniversary"],
-                "email": contact["Email"],
-                "relationship": contact["Relationship"]
+                **contact
             }
             self.personal_contacts.append(doc)
             
@@ -102,7 +92,7 @@ class ContactsImporter:
                 "_from": "me/me",
                 "_to": f"personal_contacts/{key}",
                 "type": "personal",
-                "relationship": contact["Relationship"]
+                "relationship": contact["relationship"]
             }
             self.personal_relationships.append(relationship)
             

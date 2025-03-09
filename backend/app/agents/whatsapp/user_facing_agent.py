@@ -15,19 +15,23 @@ from app.common.utils import safely_check_interrupts
 from app.agents.whatsapp.prompts import PRIVATE_AQL_GENERATION_PROMPT
 from app.common.prompts import PUBLIC_AQL_GENERATION_PROMPT
 
-from tools import (
-    save_contact,
-    send_message,
-    create_group,
-    leave_group,
-    add_to_group,
-    remove_from_group,
-    private_db_query_factory,
+from app.agents.whatsapp.tools import (
+    save_contact_factory, 
+    send_message_factory, 
+    create_group_factory, 
+    leave_group_factory, 
+    add_to_group_factory, 
+    remove_from_group_factory,
+    private_db_query_factory
 )
 
 from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory
 
+# Prompts for AQL generation
+
 class WhatsAppAgent:
+    """WhatsApp agent with memory and tooling to assist in WhatsApp tasks."""
+
     def __init__(
         self,
         checkpointer: BaseCheckpointSaver,
@@ -82,14 +86,26 @@ class WhatsAppAgent:
             """
         )
 
-        # Define all tools
+                # Get user info for Slack from DB if available
+        user_data = self.private_db.db.collection('me').get('me')
+        if not user_data:
+            raise ValueError("User data not found in database")
+        
+        whatsapp_username = user_data.get('whatsapp_username')
+        whatsapp_number = user_data.get('whatsapp_number')
+        user_id = user_data.get('user_id')
+        
+        if not whatsapp_username or not whatsapp_number or not user_id:
+            raise ValueError("Missing required user data: whatsapp_username, whatsapp_number, or user_id")
+
+        # Define all tools using factory pattern
         agent_tools = [
-            save_contact,
-            send_message,
-            create_group,
-            leave_group,
-            add_to_group,
-            remove_from_group,
+            save_contact_factory(user_id),
+            send_message_factory(user_id, whatsapp_username),
+            create_group_factory(user_id),
+            leave_group_factory(user_id),
+            add_to_group_factory(user_id),
+            remove_from_group_factory(user_id),
             get_current_datetime,
             human_confirmation_factory(self.confirmation_callback),
             about_me_factory(self.private_db),

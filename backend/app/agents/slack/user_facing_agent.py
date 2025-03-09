@@ -14,21 +14,24 @@ from app.common.utils import safely_check_interrupts
 from app.agents.slack.prompts import PRIVATE_AQL_GENERATION_PROMPT
 from app.common.prompts import PUBLIC_AQL_GENERATION_PROMPT
 
-from tools import (
+from app.agents.slack.tools import (
+    create_channel_factory,
+    leave_channel_factory,
+    add_to_channel_factory, 
+    remove_from_channel_factory,
+    set_channel_topic_factory,
+    set_status_factory,
+    set_status_with_time_factory,
     send_message_factory,
-    create_channel,
-    leave_channel,
-    add_to_channel,
-    remove_from_channel,
-    set_channel_topic,
-    set_status,
-    set_status_with_time,
-    private_db_query_factory,
+    private_db_query_factory
 )
 
 from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory
 
+
 class SlackAgent:
+    """Slack agent with memory and tooling to assist in Slack tasks."""
+
     def __init__(
         self,
         checkpointer: BaseCheckpointSaver,
@@ -84,17 +87,30 @@ class SlackAgent:
             * Always try to fill up all the details making sure there are no template messages like [Your Name] or [Company Name]. Always try find information to fill up the template if possible ask the user for it.
             """
         )
+        
+        # Get user info for Slack from DB if available
+        user_data = self.private_db.db.collection('me').get('me')
+        if not user_data:
+            raise ValueError("User data not found in database")
+        
+        slack_username = user_data.get('slack_username')
+        slack_email = user_data.get('slack_email')
+        user_id = user_data.get('user_id')
+        
+        if not slack_username or not slack_email or not user_id:
+            raise ValueError("Missing required user data: slack_username, slack_email, or user_id")
 
-        # Define all tools
+
+        # Define all tools using factory pattern
         agent_tools = [
-            send_message_factory(self.private_db),
-            create_channel,
-            leave_channel,
-            add_to_channel,
-            remove_from_channel,
-            set_channel_topic,
-            set_status,
-            set_status_with_time,
+            send_message_factory(user_id, slack_username, slack_email),
+            create_channel_factory(user_id),
+            leave_channel_factory(user_id),
+            add_to_channel_factory(user_id),
+            remove_from_channel_factory(user_id),
+            set_channel_topic_factory(user_id),
+            set_status_factory(user_id),
+            set_status_with_time_factory(user_id),
             get_current_datetime,
             human_confirmation_factory(self.confirmation_callback),
             about_me_factory(self.private_db),
@@ -210,4 +226,4 @@ if __name__ == "__main__":
         confirmation_callback=lambda x: print("Agent Asked for confirmation: ", x)
     )
 
-    agent.run_interactive(thread_id="123", debug=False) 
+    agent.run_interactive(thread_id="123", debug=True) 

@@ -1,18 +1,17 @@
 import os
 import sys
-import argparse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+
+# Add root directory to path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 from arango import ArangoClient
-import traceback
-
-# Add project root to path for imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
-
+from arango.database import StandardDatabase
+from arango.graph import Graph
 
 class MessagingGraphSetup:
     """
-    A migration script to set up the graph database structure for messaging systems (Slack and WhatsApp).
-    This creates the necessary collections, edge definitions, and indexes for efficient queries.
+    Setup for messaging graph database collections and indexes.
     """
     
     def __init__(self,
@@ -21,355 +20,320 @@ class MessagingGraphSetup:
                 username="root",
                 password="zxcv"):
         """
-        Initialize the MessagingGraphSetup.
+        Initialize graph setup with database connection parameters.
         
         Args:
-            db_name: The name of the database
-            host: The ArangoDB host URL
-            username: The ArangoDB username
-            password: The ArangoDB password
+            db_name: ArangoDB database name
+            host: ArangoDB host URL
+            username: Database username
+            password: Database password
         """
         self.db_name = db_name
         self.host = host
         self.username = username
         self.password = password
+        
+        # Graph and collection names
+        self.private_graph_name = "private_graph"
+        
+        # Define vertex collections for all messaging platforms
+        self.vertex_collections = [
+            # Slack collections
+            "slack_users",
+            "slack_channels",
+            "slack_messages",
+            "slack_files",
+            "slack_reactions",
+            "slack_status",
+            
+            # WhatsApp collections
+            "whatsapp_contacts",
+            "whatsapp_groups",
+            "whatsapp_messages",
+            "whatsapp_media"
+        ]
+        
+        # Define edge collections for all messaging platforms
+        self.edge_collections = [
+            # Slack edges
+            "slack_sent_by",
+            "slack_sent_to",
+            "slack_member_of",
+            "slack_reacted_to",
+            "slack_mentioned_in",
+            "slack_attached_to",
+            
+            # WhatsApp edges
+            "whatsapp_sent_by",
+            "whatsapp_sent_to",
+            "whatsapp_member_of",
+            "whatsapp_has_media"
+        ]
+        
+        # Define edge definitions for the private graph
+        self.edge_definitions = [
+            # Slack edge definitions
+            {
+                "edge_collection": "slack_sent_by",
+                "from_vertex_collections": ["slack_users"],
+                "to_vertex_collections": ["slack_messages"]
+            },
+            {
+                "edge_collection": "slack_sent_to",
+                "from_vertex_collections": ["slack_messages"],
+                "to_vertex_collections": ["slack_channels"]
+            },
+            {
+                "edge_collection": "slack_member_of",
+                "from_vertex_collections": ["slack_users"],
+                "to_vertex_collections": ["slack_channels"]
+            },
+            {
+                "edge_collection": "slack_reacted_to",
+                "from_vertex_collections": ["slack_users"],
+                "to_vertex_collections": ["slack_messages"]
+            },
+            {
+                "edge_collection": "slack_mentioned_in",
+                "from_vertex_collections": ["slack_users"],
+                "to_vertex_collections": ["slack_messages"]
+            },
+            {
+                "edge_collection": "slack_attached_to",
+                "from_vertex_collections": ["slack_files"],
+                "to_vertex_collections": ["slack_messages"]
+            },
+            
+            # WhatsApp edge definitions
+            {
+                "edge_collection": "whatsapp_sent_by",
+                "from_vertex_collections": ["whatsapp_contacts"],
+                "to_vertex_collections": ["whatsapp_messages"]
+            },
+            {
+                "edge_collection": "whatsapp_sent_to",
+                "from_vertex_collections": ["whatsapp_messages"],
+                "to_vertex_collections": ["whatsapp_groups", "whatsapp_contacts"]
+            },
+            {
+                "edge_collection": "whatsapp_member_of",
+                "from_vertex_collections": ["whatsapp_contacts"],
+                "to_vertex_collections": ["whatsapp_groups"]
+            },
+            {
+                "edge_collection": "whatsapp_has_media",
+                "from_vertex_collections": ["whatsapp_messages"],
+                "to_vertex_collections": ["whatsapp_media"]
+            }
+        ]
+        
+        # Database connection
         self.client = None
         self.db = None
+        self.setup_success = False
         
-        # Slack graph definition
-        self.slack_graph_name = "slack_data"
-        self.slack_edge_definitions = [
-            {
-                "edge_collection": "slack_contact_message",
-                "from_vertex_collections": ["work_contacts"],
-                "to_vertex_collections": ["slack_messages"],
-            },
-            {
-                "edge_collection": "slack_identifier_message",
-                "from_vertex_collections": ["identifiers"],
-                "to_vertex_collections": ["slack_messages"],
-            },
-            {
-                "edge_collection": "slack_message_analysis",
-                "from_vertex_collections": ["analyzer_identifiers"],
-                "to_vertex_collections": ["slack_messages"],
-            }
-        ]
-        self.slack_orphan_collections = []
-        
-        # WhatsApp graph definition
-        self.whatsapp_graph_name = "whatsapp_data"
-        self.whatsapp_edge_definitions = [
-            {
-                "edge_collection": "whatsapp_contact_message",
-                "from_vertex_collections": ["work_contacts"],
-                "to_vertex_collections": ["whatsapp_messages"],
-            },
-            {
-                "edge_collection": "whatsapp_identifier_message",
-                "from_vertex_collections": ["identifiers"],
-                "to_vertex_collections": ["whatsapp_messages"],
-            },
-            {
-                "edge_collection": "whatsapp_message_analysis",
-                "from_vertex_collections": ["analyzer_identifiers"],
-                "to_vertex_collections": ["whatsapp_messages"],
-            }
-        ]
-        self.whatsapp_orphan_collections = []
-        
-        # Common collections across both graphs
-        self.common_vertex_collections = [
-            "work_contacts",
-            "identifiers",
-            "analyzer_identifiers"
-        ]
-        
-        # Slack-specific collections
-        self.slack_vertex_collections = [
-            "slack_messages"
-        ]
-        
-        # WhatsApp-specific collections
-        self.whatsapp_vertex_collections = [
-            "whatsapp_messages"
-        ]
-        
-        # Edge collections
-        self.edge_collections = [
-            "slack_contact_message",
-            "slack_identifier_message",
-            "slack_message_analysis",
-            "whatsapp_contact_message",
-            "whatsapp_identifier_message",
-            "whatsapp_message_analysis"
-        ]
-    
     def connect_to_db(self):
         """
-        Connect to the ArangoDB database.
-        """
-        # Initialize the client
-        self.client = ArangoClient(hosts=self.host)
+        Connect to ArangoDB and verify connection.
         
-        # Connect to the system database
-        sys_db = self.client.db("_system", username=self.username, password=self.password)
-        
-        # Create the database if it doesn't exist
-        if not sys_db.has_database(self.db_name):
-            sys_db.create_database(self.db_name)
-        
-        # Connect to the application database
-        self.db = self.client.db(self.db_name, username=self.username, password=self.password)
-        
-        print(f"Connected to database: {self.db_name}")
-    
-    def create_collections(self):
-        """
-        Create all necessary vertex and edge collections if they don't exist.
-        """
-        # Create common vertex collections
-        for collection_name in self.common_vertex_collections:
-            if not self.db.has_collection(collection_name):
-                self.db.create_collection(collection_name)
-                print(f"Created vertex collection: {collection_name}")
-            else:
-                print(f"Vertex collection already exists: {collection_name}")
-        
-        # Create Slack-specific vertex collections
-        for collection_name in self.slack_vertex_collections:
-            if not self.db.has_collection(collection_name):
-                self.db.create_collection(collection_name)
-                print(f"Created vertex collection: {collection_name}")
-            else:
-                print(f"Vertex collection already exists: {collection_name}")
-        
-        # Create WhatsApp-specific vertex collections
-        for collection_name in self.whatsapp_vertex_collections:
-            if not self.db.has_collection(collection_name):
-                self.db.create_collection(collection_name)
-                print(f"Created vertex collection: {collection_name}")
-            else:
-                print(f"Vertex collection already exists: {collection_name}")
-        
-        # Create edge collections
-        for collection_name in self.edge_collections:
-            if not self.db.has_collection(collection_name):
-                self.db.create_collection(collection_name, edge=True)
-                print(f"Created edge collection: {collection_name}")
-            else:
-                print(f"Edge collection already exists: {collection_name}")
-    
-    def create_indexes(self):
-        """
-        Create indexes for efficient querying.
-        """
-        # Index for work_contacts
-        if self.db.has_collection("work_contacts"):
-            collection = self.db.collection("work_contacts")
-            
-            # Create email index if not exists
-            if not any(idx["fields"] == ["email"] for idx in collection.indexes()):
-                collection.add_hash_index(fields=["email"], unique=True, sparse=True)
-                print("Created hash index on work_contacts.email")
-            else:
-                print("Index on work_contacts.email already exists")
-            
-            # Create phone_number index if not exists
-            if not any(idx["fields"] == ["phone_number"] for idx in collection.indexes()):
-                collection.add_hash_index(fields=["phone_number"], unique=True, sparse=True)
-                print("Created hash index on work_contacts.phone_number")
-            else:
-                print("Index on work_contacts.phone_number already exists")
-        
-        # Index for identifiers
-        if self.db.has_collection("identifiers"):
-            collection = self.db.collection("identifiers")
-            
-            # Create value index if not exists
-            if not any(idx["fields"] == ["value"] for idx in collection.indexes()):
-                collection.add_hash_index(fields=["value"], unique=True)
-                print("Created hash index on identifiers.value")
-            else:
-                print("Index on identifiers.value already exists")
-        
-        # Index for analyzer_identifiers
-        if self.db.has_collection("analyzer_identifiers"):
-            collection = self.db.collection("analyzer_identifiers")
-            
-            # Create type index if not exists
-            if not any(idx["fields"] == ["type"] for idx in collection.indexes()):
-                collection.add_hash_index(fields=["type"])
-                print("Created hash index on analyzer_identifiers.type")
-            else:
-                print("Index on analyzer_identifiers.type already exists")
-        
-        # Indexes for slack_messages
-        if self.db.has_collection("slack_messages"):
-            collection = self.db.collection("slack_messages")
-            
-            # Create timestamp index if not exists
-            if not any(idx["fields"] == ["timestamp"] for idx in collection.indexes()):
-                collection.add_skiplist_index(fields=["timestamp"])
-                print("Created skiplist index on slack_messages.timestamp")
-            else:
-                print("Index on slack_messages.timestamp already exists")
-            
-            # Create channel index if not exists
-            if not any(idx["fields"] == ["channel"] for idx in collection.indexes()):
-                collection.add_hash_index(fields=["channel"])
-                print("Created hash index on slack_messages.channel")
-            else:
-                print("Index on slack_messages.channel already exists")
-        
-        # Indexes for whatsapp_messages
-        if self.db.has_collection("whatsapp_messages"):
-            collection = self.db.collection("whatsapp_messages")
-            
-            # Create timestamp index if not exists
-            if not any(idx["fields"] == ["timestamp"] for idx in collection.indexes()):
-                collection.add_skiplist_index(fields=["timestamp"])
-                print("Created skiplist index on whatsapp_messages.timestamp")
-            else:
-                print("Index on whatsapp_messages.timestamp already exists")
-            
-            # Create group_id index if not exists
-            if not any(idx["fields"] == ["group_id"] for idx in collection.indexes()):
-                collection.add_hash_index(fields=["group_id"], sparse=True)
-                print("Created hash index on whatsapp_messages.group_id")
-            else:
-                print("Index on whatsapp_messages.group_id already exists")
-        
-        # Create indexes for analysis edge collections
-        for edge_collection in ["slack_message_analysis", "whatsapp_message_analysis"]:
-            if self.db.has_collection(edge_collection):
-                collection = self.db.collection(edge_collection)
-                
-                # Create analysis_type index if not exists
-                if not any(idx["fields"] == ["analysis_type"] for idx in collection.indexes()):
-                    collection.add_hash_index(fields=["analysis_type"])
-                    print(f"Created hash index on {edge_collection}.analysis_type")
-                else:
-                    print(f"Index on {edge_collection}.analysis_type already exists")
-    
-    def create_graphs(self):
-        """
-        Create the graph structures for Slack and WhatsApp if they don't exist.
-        """
-        # Create Slack graph
-        slack_graph = None
-        if not self.db.has_graph(self.slack_graph_name):
-            slack_graph = self.db.create_graph(self.slack_graph_name)
-            print(f"Created graph: {self.slack_graph_name}")
-        else:
-            print(f"Graph already exists: {self.slack_graph_name}")
-            slack_graph = self.db.graph(self.slack_graph_name)
-            
-        # Add edge definitions to Slack graph
-        for edge_definition in self.slack_edge_definitions:
-            edge_collection = edge_definition["edge_collection"]
-            from_collections = edge_definition["from_vertex_collections"]
-            to_collections = edge_definition["to_vertex_collections"]
-            
-            # Check if edge definition already exists
-            try:
-                slack_graph.edge_collection(edge_collection)
-                print(f"Edge definition for {edge_collection} already exists in {self.slack_graph_name}")
-            except Exception:
-                try:
-                    # Create the edge definition
-                    slack_graph.create_edge_definition(
-                        edge_collection=edge_collection,
-                        from_vertex_collections=from_collections,
-                        to_vertex_collections=to_collections
-                    )
-                    print(f"Added edge definition for {edge_collection} to {self.slack_graph_name}")
-                except Exception as e:
-                    print(f"Error adding edge definition for {edge_collection}: {str(e)}")
-                    if "duplicate edge collection" in str(e).lower():
-                        print("Skipping duplicate edge collection error and continuing...")
-                        continue
-        
-        # Create WhatsApp graph
-        whatsapp_graph = None
-        if not self.db.has_graph(self.whatsapp_graph_name):
-            whatsapp_graph = self.db.create_graph(self.whatsapp_graph_name)
-            print(f"Created graph: {self.whatsapp_graph_name}")
-        else:
-            print(f"Graph already exists: {self.whatsapp_graph_name}")
-            whatsapp_graph = self.db.graph(self.whatsapp_graph_name)
-            
-        # Add edge definitions to WhatsApp graph
-        for edge_definition in self.whatsapp_edge_definitions:
-            edge_collection = edge_definition["edge_collection"]
-            from_collections = edge_definition["from_vertex_collections"]
-            to_collections = edge_definition["to_vertex_collections"]
-            
-            # Check if edge definition already exists
-            try:
-                whatsapp_graph.edge_collection(edge_collection)
-                print(f"Edge definition for {edge_collection} already exists in {self.whatsapp_graph_name}")
-            except Exception:
-                try:
-                    # Create the edge definition
-                    whatsapp_graph.create_edge_definition(
-                        edge_collection=edge_collection,
-                        from_vertex_collections=from_collections,
-                        to_vertex_collections=to_collections
-                    )
-                    print(f"Added edge definition for {edge_collection} to {self.whatsapp_graph_name}")
-                except Exception as e:
-                    print(f"Error adding edge definition for {edge_collection}: {str(e)}")
-                    if "duplicate edge collection" in str(e).lower():
-                        print("Skipping duplicate edge collection error and continuing...")
-                        continue
-    
-    def run(self):
-        """
-        Run the full migration: connect to the database, create collections, 
-        create indexes, and set up the graph structure.
+        Returns:
+            True if connection successful, False otherwise
         """
         try:
-            # Step 1: Connect to the database
-            self.connect_to_db()
+            # Connect to ArangoDB
+            self.client = ArangoClient(hosts=self.host)
+            sys_db = self.client.db('_system', username=self.username, password=self.password)
             
-            # Step 2: Create all collections
-            self.create_collections()
+            # Create database if it doesn't exist
+            if not sys_db.has_database(self.db_name):
+                sys_db.create_database(self.db_name)
+                print(f"Created database: {self.db_name}")
+            else:
+                print(f"Database already exists: {self.db_name}")
             
-            # Step 3: Create indexes
-            self.create_indexes()
-            
-            # Step 4: Create graph structures
-            self.create_graphs()
-            
-            print("Migration completed successfully!")
+            # Connect to the database
+            self.db = self.client.db(self.db_name, username=self.username, password=self.password)
+            print(f"Connected to database: {self.db_name}")
             return True
         
         except Exception as e:
-            print(f"Error during migration: {str(e)}")
-            traceback.print_exc()
+            print(f"Database connection error: {str(e)}")
             return False
-
+    
+    def create_collections(self):
+        """
+        Create all vertex and edge collections if they don't exist.
+        
+        Returns:
+            True if collections created successfully, False otherwise
+        """
+        try:
+            # Create vertex collections
+            for collection_name in self.vertex_collections:
+                if not self.db.has_collection(collection_name):
+                    self.db.create_collection(collection_name)
+                    print(f"Created vertex collection: {collection_name}")
+                else:
+                    print(f"Vertex collection already exists: {collection_name}")
+            
+            # Create edge collections
+            for collection_name in self.edge_collections:
+                if not self.db.has_collection(collection_name):
+                    self.db.create_collection(collection_name, edge=True)
+                    print(f"Created edge collection: {collection_name}")
+                else:
+                    print(f"Edge collection already exists: {collection_name}")
+            
+            return True
+        
+        except Exception as e:
+            print(f"Error creating collections: {str(e)}")
+            return False
+    
+    def create_indexes(self):
+        """
+        Create indexes for efficient queries.
+        
+        Returns:
+            True if indexes created successfully, False otherwise
+        """
+        try:
+            # Create indexes for Slack collections
+            # Users
+            slack_users = self.db.collection("slack_users")
+            if not any(idx["fields"] == ["username"] for idx in slack_users.indexes()):
+                slack_users.add_hash_index(fields=["username"], unique=True)
+                print("Created index on slack_users.username")
+            
+            if not any(idx["fields"] == ["email"] for idx in slack_users.indexes()):
+                slack_users.add_hash_index(fields=["email"], unique=True)
+                print("Created index on slack_users.email")
+                
+            # Channels
+            slack_channels = self.db.collection("slack_channels")
+            if not any(idx["fields"] == ["name"] for idx in slack_channels.indexes()):
+                slack_channels.add_hash_index(fields=["name"], unique=True)
+                print("Created index on slack_channels.name")
+            
+            # Messages
+            slack_messages = self.db.collection("slack_messages")
+            if not any(idx["fields"] == ["timestamp"] for idx in slack_messages.indexes()):
+                slack_messages.add_skiplist_index(fields=["timestamp"])
+                print("Created index on slack_messages.timestamp")
+            
+            if not any(idx["fields"] == ["content"] for idx in slack_messages.indexes()):
+                slack_messages.add_fulltext_index(fields=["content"])
+                print("Created fulltext index on slack_messages.content")
+            
+            # Create indexes for WhatsApp collections
+            # Contacts
+            whatsapp_contacts = self.db.collection("whatsapp_contacts")
+            if not any(idx["fields"] == ["phone_number"] for idx in whatsapp_contacts.indexes()):
+                whatsapp_contacts.add_hash_index(fields=["phone_number"], unique=True)
+                print("Created index on whatsapp_contacts.phone_number")
+            
+            if not any(idx["fields"] == ["name"] for idx in whatsapp_contacts.indexes()):
+                whatsapp_contacts.add_hash_index(fields=["name"])
+                print("Created index on whatsapp_contacts.name")
+            
+            # Groups
+            whatsapp_groups = self.db.collection("whatsapp_groups")
+            if not any(idx["fields"] == ["name"] for idx in whatsapp_groups.indexes()):
+                whatsapp_groups.add_hash_index(fields=["name"], unique=True)
+                print("Created index on whatsapp_groups.name")
+            
+            # Messages
+            whatsapp_messages = self.db.collection("whatsapp_messages")
+            if not any(idx["fields"] == ["timestamp"] for idx in whatsapp_messages.indexes()):
+                whatsapp_messages.add_skiplist_index(fields=["timestamp"])
+                print("Created index on whatsapp_messages.timestamp")
+            
+            if not any(idx["fields"] == ["content"] for idx in whatsapp_messages.indexes()):
+                whatsapp_messages.add_fulltext_index(fields=["content"])
+                print("Created fulltext index on whatsapp_messages.content")
+            
+            return True
+        
+        except Exception as e:
+            print(f"Error creating indexes: {str(e)}")
+            return False
+    
+    def create_graphs(self):
+        """
+        Create graph with edge definitions if they don't exist.
+        
+        Returns:
+            True if graph created successfully, False otherwise
+        """
+        try:
+            # Create private graph
+            private_graph = None
+            if not self.db.has_graph(self.private_graph_name):
+                private_graph = self.db.create_graph(self.private_graph_name)
+                print(f"Created graph: {self.private_graph_name}")
+            else:
+                print(f"Graph already exists: {self.private_graph_name}")
+                private_graph = self.db.graph(self.private_graph_name)
+            
+            # Add edge definitions to private graph
+            for edge_definition in self.edge_definitions:
+                edge_collection = edge_definition["edge_collection"]
+                from_collections = edge_definition["from_vertex_collections"]
+                to_collections = edge_definition["to_vertex_collections"]
+                
+                # Check if edge definition already exists
+                try:
+                    private_graph.edge_collection(edge_collection)
+                    print(f"Edge definition for {edge_collection} already exists in {self.private_graph_name}")
+                except Exception:
+                    try:
+                        # Create the edge definition
+                        private_graph.create_edge_definition(
+                            edge_collection=edge_collection,
+                            from_vertex_collections=from_collections,
+                            to_vertex_collections=to_collections
+                        )
+                        print(f"Added edge definition for {edge_collection} to {self.private_graph_name}")
+                    except Exception as e:
+                        print(f"Error adding edge definition for {edge_collection}: {str(e)}")
+                        if "duplicate edge collection" in str(e).lower():
+                            print("Skipping duplicate edge collection error and continuing...")
+                            continue
+            
+            return True
+        
+        except Exception as e:
+            print(f"Error creating graph: {str(e)}")
+            return False
+    
+    def run(self):
+        """
+        Run the complete setup process.
+        
+        Returns:
+            True if setup completed successfully, False otherwise
+        """
+        # Connect to database
+        if not self.connect_to_db():
+            return False
+        
+        # Create collections
+        if not self.create_collections():
+            return False
+        
+        # Create indexes
+        if not self.create_indexes():
+            return False
+        
+        # Create graph
+        if not self.create_graphs():
+            return False
+        
+        self.setup_success = True
+        print("Database setup completed successfully!")
+        return True
 
 if __name__ == "__main__":
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Set up messaging graph database structure")
-    parser.add_argument("--host", default="http://localhost:8529", help="ArangoDB host URL")
-    parser.add_argument("--db", default="my_database", help="Database name")
-    parser.add_argument("--username", default="root", help="ArangoDB username")
-    parser.add_argument("--password", default="zxcv", help="ArangoDB password")
-    
-    args = parser.parse_args()
-    
-    # Run the migration
-    setup = MessagingGraphSetup(
-        db_name=args.db,
-        host=args.host,
-        username=args.username,
-        password=args.password
-    )
-    
-    success = setup.run()
-    
-    # Exit with appropriate code
-    sys.exit(0 if success else 1) 
+    # Create and run the setup
+    setup = MessagingGraphSetup()
+    setup.run() 

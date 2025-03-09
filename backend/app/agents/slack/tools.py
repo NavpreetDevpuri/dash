@@ -10,34 +10,213 @@ import datetime
 
 
 # Initialize Celery app
-celery_app = Celery('slack_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+celery_app = Celery('slack_processing', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
-def send_message_factory(arango_graph: ArangoGraph):
-    """
-    Factory function to create a send_message tool that includes user context.
+def create_channel_factory(user_id: str):
+    """Factory function to create a create_channel tool with user_id closure"""
     
-    Args:
-        arango_graph: ArangoDB graph connection
-    """
-    # Get user information from the 'me' collection once at tool creation time
-    try:
-        user_data = arango_graph.db.collection('me').get('me')
-        slack_username = user_data.get('slack_username', 'unknown')
-        slack_email = user_data.get('slack_email', 'unknown')
-    except Exception as e:
-        print(f"Error fetching user data: {str(e)}")
-        slack_username = 'unknown'
-        slack_email = 'unknown'
+    @tool
+    def create_channel(channel_name: str, members: List[str]) -> str:
+        """
+        Create a new Slack channel with the specified members.
+        
+        Args:
+            channel_name: The name for the new channel
+            members: Array of usernames or user emails to add to the channel
+        
+        Returns:
+            Confirmation message
+        """
+        # Create channel payload
+        payload = {
+            "action": "create_channel", 
+            "channel_name": channel_name, 
+            "members": members,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_channel_action",
+            kwargs={
+                "user_id": user_id,
+                "channel_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"Channel {channel_name} has been created with {len(members)} members."
+    
+    return create_channel
+
+
+def leave_channel_factory(user_id: str):
+    """Factory function to create a leave_channel tool with user_id closure"""
+    
+    @tool
+    def leave_channel(channel_name: str) -> str:
+        """
+        Leave a Slack channel.
+        
+        Args:
+            channel_name: The name of the channel to leave
+        
+        Returns:
+            Confirmation message
+        """
+        # Create payload
+        payload = {
+            "action": "leave_channel", 
+            "channel_name": channel_name,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_channel_action",
+            kwargs={
+                "user_id": user_id,
+                "channel_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"You have left the channel {channel_name}."
+    
+    return leave_channel
+
+
+def add_to_channel_factory(user_id: str):
+    """Factory function to create an add_to_channel tool with user_id closure"""
+    
+    @tool
+    def add_to_channel(channel_name: str, members: List[str]) -> str:
+        """
+        Add members to a Slack channel.
+        
+        Args:
+            channel_name: The name of the channel
+            members: Array of usernames or user emails to add to the channel
+        
+        Returns:
+            Confirmation message
+        """
+        # Create payload
+        payload = {
+            "action": "add_to_channel", 
+            "channel_name": channel_name, 
+            "members": members,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_channel_action",
+            kwargs={
+                "user_id": user_id,
+                "channel_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"Added {len(members)} members to channel {channel_name}."
+    
+    return add_to_channel
+
+
+def remove_from_channel_factory(user_id: str):
+    """Factory function to create a remove_from_channel tool with user_id closure"""
+    
+    @tool
+    def remove_from_channel(channel_name: str, members: List[str]) -> str:
+        """
+        Remove members from a Slack channel.
+        
+        Args:
+            channel_name: The name of the channel
+            members: Array of usernames or user emails to remove from the channel
+        
+        Returns:
+            Confirmation message
+        """
+        # Create payload
+        payload = {
+            "action": "remove_from_channel", 
+            "channel_name": channel_name, 
+            "members": members,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_channel_action",
+            kwargs={
+                "user_id": user_id,
+                "channel_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"Removed {len(members)} members from channel {channel_name}."
+    
+    return remove_from_channel
+
+
+def set_channel_topic_factory(user_id: str):
+    """Factory function to create a set_channel_topic tool with user_id closure"""
+    
+    @tool
+    def set_channel_topic(channel_name: str, topic: str) -> str:
+        """
+        Set the topic for a Slack channel.
+        
+        Args:
+            channel_name: The name of the channel
+            topic: The new topic to set
+        
+        Returns:
+            Confirmation message
+        """
+        # Create payload
+        payload = {
+            "action": "set_channel_topic", 
+            "channel_name": channel_name, 
+            "topic": topic,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_channel_action",
+            kwargs={
+                "user_id": user_id,
+                "channel_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"Set topic for channel {channel_name} to: '{topic}'."
+    
+    return set_channel_topic
+
+
+def send_message_factory(user_id: str, slack_username: str = None, slack_email: str = None):
+    """Factory function to create a send_message tool with user_id and user details closure"""
     
     @tool
     def send_message(channel: str, message: str) -> str:
         """
-        Send a Slack message to a channel or user.
+        Send a message to a Slack channel or user.
         
         Args:
-            channel: The channel name or user email to send the message to
-            message: The message content to send
-        
+            channel: The channel name or user handle to send the message to
+            message: The message content
+            
         Returns:
             Confirmation message
         """
@@ -56,7 +235,7 @@ def send_message_factory(arango_graph: ArangoGraph):
         celery_app.send_task(
             "slack.process_message",
             kwargs={
-                "user_id": "me",  # This will be replaced with actual user ID in production
+                "user_id": user_id,
                 "message_data": message_data
             }
         )
@@ -67,136 +246,87 @@ def send_message_factory(arango_graph: ArangoGraph):
     return send_message
 
 
-@tool
-def create_channel(channel_name: str, members: List[str]) -> str:
-    """
-    Create a new Slack channel with the specified members.
+def set_status_with_time_factory(user_id: str):
+    """Factory function to create a set_status_with_time tool with user_id closure"""
     
-    Args:
-        channel_name: The name for the new channel
-        members: Array of usernames or user emails to add to the channel
+    @tool
+    def set_status_with_time(status_text: str, status_emoji: str, end_time: str) -> str:
+        """
+        Set your Slack status with an expiration time.
+        
+        Args:
+            status_text: The status text (e.g., "In a meeting")
+            status_emoji: An emoji code (e.g., ":calendar:")
+            end_time: When the status should expire (e.g., "2023-11-30T15:30:00")
+            
+        Returns:
+            Confirmation message
+        """
+        # Create payload
+        payload = {
+            "action": "set_status", 
+            "status_text": status_text, 
+            "status_emoji": status_emoji,
+            "end_time": end_time,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_status_update",
+            kwargs={
+                "user_id": user_id,
+                "status_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"Status set to {status_emoji} {status_text} until {end_time}"
     
-    Returns:
-        Confirmation message
-    """
-    payload = {"action": "create_channel", "channel_name": channel_name, "members": members}
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Channel '{channel_name}' created with members: {members}"
+    return set_status_with_time
 
 
-@tool
-def leave_channel(channel_name: str) -> str:
-    """
-    Leave a Slack channel.
+def set_status_factory(user_id: str):
+    """Factory function to create a set_status tool with user_id closure"""
     
-    Args:
-        channel_name: The name of the channel to leave
+    @tool
+    def set_status(status_text: str, status_emoji: str) -> str:
+        """
+        Set your Slack status (without an expiration time).
+        
+        Args:
+            status_text: The status text (e.g., "Working remotely")
+            status_emoji: An emoji code (e.g., ":house:")
+            
+        Returns:
+            Confirmation message
+        """
+        # Create payload
+        payload = {
+            "action": "set_status", 
+            "status_text": status_text, 
+            "status_emoji": status_emoji,
+            "end_time": None,
+            "timestamp": str(datetime.datetime.utcnow()),
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_status_update",
+            kwargs={
+                "user_id": user_id,
+                "status_data": payload
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {payload}")
+        return f"Status set to {status_emoji} {status_text}"
     
-    Returns:
-        Confirmation message
-    """
-    payload = {"action": "leave_channel", "channel_name": channel_name}
-    print(f"TOOL EXECUTION: {payload}")
-    return f"You have left the channel '{channel_name}'"
+    return set_status
 
 
-@tool
-def add_to_channel(channel_name: str, members: List[str]) -> str:
-    """
-    Add members to an existing Slack channel.
-    
-    Args:
-        channel_name: The name of the channel
-        members: Array of usernames or user emails to add to the channel
-    
-    Returns:
-        Confirmation message
-    """
-    payload = {"action": "add_to_channel", "channel_name": channel_name, "members": members}
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Added {members} to channel '{channel_name}'"
-
-
-@tool
-def remove_from_channel(channel_name: str, members: List[str]) -> str:
-    """
-    Remove members from a Slack channel.
-    
-    Args:
-        channel_name: The name of the channel
-        members: Array of usernames or user emails to remove from the channel
-    
-    Returns:
-        Confirmation message
-    """
-    payload = {"action": "remove_from_channel", "channel_name": channel_name, "members": members}
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Removed {members} from channel '{channel_name}'"
-
-
-@tool
-def set_channel_topic(channel_name: str, topic: str) -> str:
-    """
-    Set the topic for a Slack channel.
-    
-    Args:
-        channel_name: The name of the channel
-        topic: The new topic to set for the channel
-    
-    Returns:
-        Confirmation message
-    """
-    payload = {"action": "set_channel_topic", "channel_name": channel_name, "topic": topic}
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Topic for channel '{channel_name}' set to: '{topic}'"
-
-
-@tool
-def set_status_with_time(status_text: str, status_emoji: str, end_time: str) -> str:
-    """
-    Set your Slack status with an automatic expiration time.
-    
-    Args:
-        status_text: The status text to display (e.g., "In a meeting")
-        status_emoji: The emoji to show with the status (e.g., ":calendar:", ":coffee:")
-        end_time: When the status should expire (in format "YYYY-MM-DD HH:MM" or "in X hours/minutes")
-    
-    Returns:
-        Confirmation message
-    """
-    payload = {
-        "action": "set_status", 
-        "status_text": status_text, 
-        "status_emoji": status_emoji,
-        "end_time": end_time
-    }
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Status set to '{status_emoji} {status_text}' until {end_time}"
-
-
-@tool
-def set_status(status_text: str, status_emoji: str) -> str:
-    """
-    Set your Slack status without an expiration time (no clear).
-    
-    Args:
-        status_text: The status text to display (e.g., "Working remotely")
-        status_emoji: The emoji to show with the status (e.g., ":house:", ":computer:")
-    
-    Returns:
-        Confirmation message
-    """
-    payload = {
-        "action": "set_status", 
-        "status_text": status_text, 
-        "status_emoji": status_emoji,
-        "end_time": "no clear"
-    }
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Status set to '{status_emoji} {status_text}' with no expiration"
-
-
-# Create separate DB query tools for private and public databases
 def private_db_query_factory(model, arango_graph, aql_generation_prompt):
     chain = ArangoGraphQAChain.from_llm(
         llm=model,
@@ -212,12 +342,9 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
     @tool
     def private_db_query(query: str) -> str:
         """
-        Translates natural language to AQL queries for your private database.
-        
-        Contains:
-        1. Slack channels, messages, and users
-        2. Dineout history and preferences
-        3. Food preferences
+        Execute a natural language query against your private messaging graph database.
+        This tool can answer questions about your Slack messages, channels, and users.
+        Private database also have dineout history and food preferences.
         
         Use this first to get conversation context, find channels or users before using other tools.
 
@@ -225,6 +352,6 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
         """
 
         result = chain.invoke(query)
-        return json.dumps(result["aql_result"]) 
+        return result
     
     return private_db_query 

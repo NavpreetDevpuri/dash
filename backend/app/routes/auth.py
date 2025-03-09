@@ -46,6 +46,7 @@ def signup():
                 # Store user's personal information in the "me" document
                 me_doc = {
                     "_key": "me",
+                    "user_id": user.id,
                     "full_name": data.get('full_name'),
                     "email": data.get('email'),
                     "created_at": datetime.datetime.utcnow().isoformat(),
