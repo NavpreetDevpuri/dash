@@ -24,3 +24,7 @@ langgraph-checkpoint-sqlite
 apsw
 llm-sandbox[docker]
 flask_swagger_ui
+celery
+langchain_anthropic
+langchain_google_genai
+langchain_community

@@ -8,8 +8,12 @@ from langgraph.types import Command
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
+# Add the backend directory to the path so Python can find the app module
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
+sys.path.insert(0, backend_dir)
+
+# Now we can import from app modules
 from app.common.utils import safely_check_interrupts
 from app.agents.dineout.prompts import RESTAURANT_AQL_GENERATION_PROMPT, SYSTEM_PROMPT
 from app.common.prompts import PUBLIC_AQL_GENERATION_PROMPT
