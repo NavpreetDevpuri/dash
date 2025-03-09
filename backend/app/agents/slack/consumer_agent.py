@@ -10,34 +10,33 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from app.db import get_system_db, get_user_db
 from app.agents.slack.schemas import Identifiers
 from app.common.llm_manager import LLMManager
-from app.common.base_consumer import BaseGraphConsumer
+from arango.database import StandardDatabase
 
 # Initialize Celery app
 celery_app = Celery('slack_consumer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
-# Collection names for Slack data
-WORK_CONTACTS_COLLECTION = "work_contacts"
-SLACK_MESSAGES_COLLECTION = "slack_messages"
+# Collection names for our simplified graph
+CONTACTS_COLLECTION = "contacts"
+CHANNELS_COLLECTION = "slack_channels"
+MESSAGES_COLLECTION = "slack_messages"
+CONTACT_CHANNEL_EDGE_COLLECTION = "contact_channel"
 IDENTIFIERS_COLLECTION = "identifiers"
-SLACK_CONTACT_MESSAGE_EDGE_COLLECTION = "slack_contact_message"
-SLACK_IDENTIFIER_MESSAGE_EDGE_COLLECTION = "slack_identifier_message"
+IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier_message"
 
-class SlackConsumer(BaseGraphConsumer):
+class SlackConsumer:
     """
-    A Celery consumer that processes Slack messages, extracts identifiers,
-    and stores them in the database.
+    A Celery consumer that processes Slack messages into a simple graph:
+    
+      • Contacts (identified by slack_username)
+      • Channels (a Slack channel)
+      • Messages (sent by a contact in a channel)
+      • Identifiers extracted from the message text
+      
+    A contact is linked to a channel via an edge (membership) and each identifier is linked
+    to the message from which it was extracted.
     """
-    def __init__(self, model_provider: str = "openai", model_name: str = "gpt-4o-mini", 
-                temperature: float = 0):
-        """
-        Initialize the SlackConsumer.
-        
-        Args:
-            model_provider: The LLM provider to use (openai, anthropic, gemini)
-            model_name: The model name to use
-            temperature: The temperature for the model
-        """
-        super().__init__()
+    def __init__(self, model_provider: str = "openai", model_name: str = "gpt-4o-mini", temperature: float = 0):
+        # Initialize the LLM with structured output to extract identifiers.
         self.llm = LLMManager.get_model(
             provider=model_provider,
             model_name=model_name,
@@ -48,229 +47,254 @@ class SlackConsumer(BaseGraphConsumer):
         """
         Use an LLM to extract identifiers from the message content.
         
-        Args:
-            message_content: The content of the Slack message
-            
         Returns:
-            A list of identifiers
+            A list of identifiers.
         """
-        # Construct prompt for identifier extraction
         prompt = f"""
-        Extract unique identifiers from this Slack message. Identifiers could be:
-        - Email addresses
-        - Person names
-        - Company names
-        - Project names
-        - Technical terms
-        - Keywords that seem important in the context
+Extract unique identifiers from this Slack message. Identifiers could be:
+- Email addresses
+- Person names
+- Company names
+- Project names
+- Technical terms
+- Keywords that seem important in the context
 
-        Return only the identifiers as a list.
-        
-        Message:
-        {message_content}
-        """
-        
-        # Call the model
+Return only the identifiers as a list.
+
+Message:
+{message_content}
+"""
         response = self.llm.invoke([{"role": "user", "content": prompt}])
-        
-        # Create and return an Identifiers object with lowercase identifiers
         return [identifier.lower() for identifier in response.identifiers]
-    
-    def _add_work_contact(self, db, email: str, slack_username: str) -> str:
+
+    def _add_contact(self, db: StandardDatabase, slack_username: str) -> Optional[str]:
         """
-        Add a contact to the work_contacts collection if it doesn't already exist.
-        
-        Args:
-            db: Database connection
-            email: Email of the contact
-            slack_username: Slack username of the contact
-            
-        Returns:
-            The ID of the contact
+        Add or retrieve a contact by slack_username.
         """
-        # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(WORK_CONTACTS_COLLECTION):
+        if not db.has_collection(CONTACTS_COLLECTION):
             return None
-        
-        # Check if contact already exists
+
         aql = f"""
-        FOR contact IN {WORK_CONTACTS_COLLECTION}
-        FILTER contact.email == @email
-        RETURN contact._id
+        FOR contact IN {CONTACTS_COLLECTION}
+          FILTER contact.slack_username == @slack_username
+          RETURN contact._id
         """
-        cursor = db.aql.execute(aql, bind_vars={"email": email})
-        results = [doc for doc in cursor]
-        
-        if results:
-            return results[0]
-        
-        # Add new contact
-        doc = {
-            "email": email,
+        cursor = db.aql.execute(aql, bind_vars={"slack_username": slack_username})
+        try:
+            contact_id = cursor.next()
+        except StopIteration:
+            contact_id = None
+
+        if contact_id:
+            return contact_id
+
+        contact_doc = {
             "slack_username": slack_username,
-            "created_at": str(datetime.datetime.utcnow())
+            "created_at": datetime.datetime.now().isoformat(),
+            "active": True
         }
-        result = db.collection(WORK_CONTACTS_COLLECTION).insert(doc)
+        result = db.collection(CONTACTS_COLLECTION).insert(contact_doc)
         return result["_id"]
-    
-    def _add_slack_message(self, db, message_data: Dict[str, Any]) -> str:
+
+    def _add_channel(self, db: StandardDatabase, channel_name: str) -> Optional[str]:
         """
-        Add a Slack message to the database.
-        
-        Args:
-            db: Database connection
-            message_data: Slack message data
-            
-        Returns:
-            The ID of the inserted message
+        Add or retrieve a Slack channel.
         """
-        # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(SLACK_MESSAGES_COLLECTION):
+        if not db.has_collection(CHANNELS_COLLECTION):
             return None
-        
-        # Keep the original data structure but ensure required fields
-        message_data_copy = message_data.copy()
-        
-        # Ensure created_at field
-        if "created_at" not in message_data_copy:
-            message_data_copy["created_at"] = str(datetime.datetime.utcnow())
-        
-        result = db.collection(SLACK_MESSAGES_COLLECTION).insert(message_data_copy)
+
+        aql = f"""
+        FOR channel IN {CHANNELS_COLLECTION}
+          FILTER channel.name == @channel_name
+          RETURN channel._id
+        """
+        cursor = db.aql.execute(aql, bind_vars={"channel_name": channel_name})
+        try:
+            channel_id = cursor.next()
+        except StopIteration:
+            channel_id = None
+
+        if channel_id:
+            return channel_id
+
+        channel_doc = {
+            "name": channel_name,
+            "created_at": datetime.datetime.now().isoformat(),
+            "active": True
+        }
+        result = db.collection(CHANNELS_COLLECTION).insert(channel_doc)
         return result["_id"]
-    
-    def _add_identifier(self, db, identifier: str) -> str:
+
+    def _add_message(self, db: StandardDatabase, message_data: Dict[str, Any],
+                     contact_id: str, channel_id: str) -> Optional[str]:
         """
-        Add an identifier to the database.
-        
-        Args:
-            db: Database connection
-            identifier: The identifier string
-            
-        Returns:
-            The ID of the inserted identifier
+        Add a message document that links a contact (sender) to a channel.
         """
-        # Check if collection exists, if not it will be created by the migration
+        if not db.has_collection(MESSAGES_COLLECTION):
+            return None
+
+        message_doc = {
+            "content": message_data.get("text", ""),
+            "sender_id": contact_id,
+            "channel_id": channel_id,
+            "timestamp": message_data.get("timestamp", datetime.datetime.now().isoformat()),
+            "raw_data": message_data,
+            "created_at": datetime.datetime.now().isoformat()
+        }
+        result = db.collection(MESSAGES_COLLECTION).insert(message_doc)
+        return result["_id"]
+
+    def _add_identifier(self, db: StandardDatabase, identifier: str) -> Optional[str]:
+        """
+        Add or retrieve an identifier.
+        """
         if not db.has_collection(IDENTIFIERS_COLLECTION):
             return None
-        
-        # Check if identifier already exists
+
         aql = f"""
         FOR ident IN {IDENTIFIERS_COLLECTION}
-        FILTER ident.value == @value
-        RETURN ident._id
+          FILTER ident.value == @value
+          RETURN ident._id
         """
         cursor = db.aql.execute(aql, bind_vars={"value": identifier})
-        results = [doc for doc in cursor]
-        
-        if results:
-            return results[0]
-        
-        # Add new identifier
-        doc = {
+        try:
+            identifier_id = cursor.next()
+        except StopIteration:
+            identifier_id = None
+
+        if identifier_id:
+            return identifier_id
+
+        identifier_doc = {
             "value": identifier,
-            "created_at": str(datetime.datetime.utcnow())
+            "created_at": datetime.datetime.now().isoformat()
         }
-        result = db.collection(IDENTIFIERS_COLLECTION).insert(doc)
+        result = db.collection(IDENTIFIERS_COLLECTION).insert(identifier_doc)
         return result["_id"]
-    
-    def _add_edge(self, db, from_id: str, to_id: str, collection_name: str, data: Dict[str, Any] = None) -> str:
+
+    def _add_edge(self, db: StandardDatabase, from_id: str, to_id: str, collection_name: str) -> Optional[str]:
         """
-        Add an edge between two vertices.
-        
-        Args:
-            db: Database connection
-            from_id: The ID of the source vertex
-            to_id: The ID of the target vertex
-            collection_name: The name of the edge collection
-            data: Additional edge data
-            
-        Returns:
-            The ID of the inserted edge
+        Add an edge between two vertices if it does not already exist.
         """
-        # Check if collection exists, if not it will be created by the migration
         if not db.has_collection(collection_name):
             return None
-        
-        # Prepare edge document
+
+        aql = f"""
+        FOR edge IN {collection_name}
+          FILTER edge._from == @from_id AND edge._to == @to_id
+          RETURN edge._id
+        """
+        cursor = db.aql.execute(aql, bind_vars={"from_id": from_id, "to_id": to_id})
+        try:
+            edge_id = cursor.next()
+        except StopIteration:
+            edge_id = None
+
+        if edge_id:
+            return edge_id
+
         edge_doc = {
             "_from": from_id,
             "_to": to_id,
-            "created_at": str(datetime.datetime.utcnow())
+            "created_at": datetime.datetime.now().isoformat()
         }
-        
-        # Add optional data if provided
-        if data:
-            edge_doc.update(data)
-        
-        # Insert edge
         result = db.collection(collection_name).insert(edge_doc)
         return result["_id"]
 
+    def _add_contact_channel_edge(self, db: StandardDatabase, contact_id: str, channel_id: str) -> Optional[str]:
+        """
+        Create an edge between a contact and a channel to indicate membership.
+        Assumes contact_id and channel_id are fully-qualified (e.g., "contacts/12345").
+        If not, the collection prefix will be added.
+        """
+        if "/" not in contact_id:
+            contact_id = f"{CONTACTS_COLLECTION}/{contact_id}"
+        if "/" not in channel_id:
+            channel_id = f"{CHANNELS_COLLECTION}/{channel_id}"
+        return self._add_edge(db, contact_id, channel_id, CONTACT_CHANNEL_EDGE_COLLECTION)
+
     def process_message(self, user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Process a Slack message, extract identifiers, and store in the database.
-        
-        Args:
-            user_id: The ID of the user
-            message_data: Slack message data including content, channel, etc.
-            
-        Returns:
-            A dictionary with the results of processing
+        Process an incoming Slack message:
+          1. Retrieve (or add) the contact (sender) and channel.
+          2. Create an edge from the contact to the channel.
+          3. Insert the message.
+          4. Extract identifiers from the message and store/link them.
         """
-        # Extract identifiers from message
-        identifiers = self.extract_identifiers(message_data.get("content", ""))
-        
-        # Get database connection for the user
-        db = get_user_db(user_id)
-        if not db:
-            return {"error": "Failed to connect to database", "status": "failed"}
-        
         try:
-            # Add to work_contacts if email is provided
-            contact_id = None
-            if "email" in message_data and message_data["email"]:
-                contact_id = self._add_work_contact(db, message_data["email"], message_data["username"])
-            
-            # Add slack message
-            message_id = self._add_slack_message(db, message_data)
-            
-            # Link contact to message if both exist
-            if contact_id and message_id:
-                self._add_edge(db, contact_id, message_id, SLACK_CONTACT_MESSAGE_EDGE_COLLECTION)
-            
-            # Process identifiers
+            db = get_user_db(user_id)
+            if not db:
+                return {"status": "error", "message": "Failed to connect to database"}
+
+            content = message_data.get("text", "")
+            if not content or not content.strip():
+                return {"status": "error", "message": "Message content is empty"}
+
+            slack_username = message_data.get("user")
+            channel_name = message_data.get("channel")
+            if not slack_username or not slack_username.strip():
+                return {"status": "error", "message": "No valid sender found in message data"}
+            if not channel_name or not channel_name.strip():
+                return {"status": "error", "message": "No valid channel found in message data"}
+
+            # Add or retrieve contact and channel.
+            contact_id = self._add_contact(db, slack_username)
+            channel_id = self._add_channel(db, channel_name)
+            if not contact_id or not channel_id:
+                return {"status": "error", "message": "Failed to add contact or channel"}
+
+            # Create membership edge between contact and channel.
+            self._add_contact_channel_edge(db, contact_id, channel_id)
+
+            # Insert the Slack message.
+            message_id = self._add_message(db, message_data, contact_id, channel_id)
+            if not message_id:
+                return {"status": "error", "message": "Failed to add message"}
+
+            # Extract identifiers from the message content.
+            identifiers = self.extract_identifiers(content)
             identifier_ids = []
             for identifier in identifiers:
-                identifier_id = self._add_identifier(db, identifier)
-                if identifier_id:
-                    identifier_ids.append(identifier_id)
-                    
-                    # Add edge between identifier and message
-                    if message_id:
-                        self._add_edge(db, identifier_id, message_id, SLACK_IDENTIFIER_MESSAGE_EDGE_COLLECTION)
-            
+                id_id = self._add_identifier(db, identifier)
+                if id_id:
+                    identifier_ids.append(id_id)
+                    # Create an edge from the identifier to the message.
+                    self._add_edge(db, id_id, message_id, IDENTIFIER_MESSAGE_EDGE_COLLECTION)
+
             return {
                 "status": "success",
+                "message": "Message processed successfully",
                 "message_id": message_id,
+                "contact_id": contact_id,
+                "channel_id": channel_id,
                 "identifiers": identifiers,
                 "identifier_ids": identifier_ids
             }
-        
         except Exception as e:
-            return {
-                "error": str(e),
-                "status": "failed"
-            }
+            import traceback
+            error_traceback = traceback.format_exc()
+            print(f"Error processing Slack message: {str(e)}")
+            print(f"Traceback: {error_traceback}")
+            return {"status": "error", "message": f"Error processing message: {str(e)}"}
 
-# Test code for SlackConsumer
+# Celery task for processing Slack messages
+@celery_app.task(name="slack.process_message")
+def process_slack_message(user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
+    consumer = SlackConsumer()
+    return consumer.process_message(user_id, message_data)
+
+# Celery task for processing Slack channel actions (if needed)
+@celery_app.task(name="slack.process_channel_action")
+def process_slack_channel_action(user_id: str, channel_data: Dict[str, Any]) -> Dict[str, Any]:
+    return {"status": "error", "message": "Channel actions not implemented in this simplified version"}
+
+# Sample test code for SlackConsumer
 if __name__ == "__main__":
-    # Sample user ID and message data for testing
     test_user_id = "1270834"
     test_message = {
-        "content": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
-        "channel": "dashboard-team",
-        "sender_username": "user123",  # Using username consistently instead of sender
-        "sender_email": "sender@example.com",
+        "text": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for details.",
+        "channel": "general",
+        "user": "john_doe",  # The sender's slack_username
         "timestamp": str(datetime.datetime.utcnow())
     }
     

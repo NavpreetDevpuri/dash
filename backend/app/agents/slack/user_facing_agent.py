@@ -94,16 +94,15 @@ class SlackAgent:
             raise ValueError("User data not found in database")
         
         slack_username = user_data.get('slack_username')
-        slack_email = user_data.get('slack_email')
         user_id = user_data.get('user_id')
         
-        if not slack_username or not slack_email or not user_id:
-            raise ValueError("Missing required user data: slack_username, slack_email, or user_id")
+        if not slack_username or not user_id:
+            raise ValueError("Missing required user data: slack_username, or user_id")
 
 
         # Define all tools using factory pattern
         agent_tools = [
-            send_message_factory(user_id, slack_username, slack_email),
+            send_message_factory(user_id, slack_username),
             create_channel_factory(user_id),
             leave_channel_factory(user_id),
             add_to_channel_factory(user_id),

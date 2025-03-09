@@ -2,28 +2,37 @@ import os
 import sys
 from typing import List, Dict, Any, Optional, Callable
 import datetime
+import json
 from celery import Celery
 
 # Add project root to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.db import get_system_db, get_user_db
+from app.agents.slack.schemas import AnalysisResult
 from app.common.llm_manager import LLMManager
 from app.common.base_consumer import BaseGraphConsumer
-from app.agents.slack.schemas import AnalysisResult
 
 # Initialize Celery app
 celery_app = Celery('slack_analyzer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
-# Collection names
+# Updated collection and edge names for our simplified graph plus extra analysis nodes
+CONTACTS_COLLECTION = "contacts"
+CHANNELS_COLLECTION = "slack_channels"              # Previously: slack_conversations
 SLACK_MESSAGES_COLLECTION = "slack_messages"
-ANALYZER_IDENTIFIERS_COLLECTION = "analyzer_identifiers"
-SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION = "slack_message_analysis"
+IDENTIFIERS_COLLECTION = "identifiers"
+ANALYSIS_COLLECTION = "analysis"
+
+CONTACT_CHANNEL_EDGE_COLLECTION = "contact_channel"
+IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier_message"
+CHANNEL_MESSAGE_EDGE_COLLECTION = "channel_message_edge"  # New edge linking channel to message
+SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION = "slack_message_analysis"  # Edge linking message to analysis
 
 class SlackAnalyzer(BaseGraphConsumer):
     """
-    A service that analyzes Slack messages for spam, urgency, and importance,
-    and adds analysis nodes to the graph database.
+    A Celery consumer that analyzes Slack messages for spam, urgency, and importance.
+    It reuses our graph nodes (contacts, slack_channels, slack_messages, identifiers)
+    and adds extra analysis nodes.
     """
     def __init__(
         self, 
@@ -37,15 +46,6 @@ class SlackAnalyzer(BaseGraphConsumer):
     ):
         """
         Initialize the SlackAnalyzer.
-        
-        Args:
-            model_provider: The LLM provider to use (openai, anthropic, gemini)
-            model_name: The model name to use
-            temperature: The temperature for the model
-            spam_threshold: Threshold for spam detection (0-1)
-            urgent_threshold: Threshold for urgency detection (0-1)
-            important_threshold: Threshold for importance detection (0-1)
-            notification_callback: Optional callback function for when message is analyzed
         """
         super().__init__()
         self.llm = LLMManager.get_model(
@@ -57,101 +57,122 @@ class SlackAnalyzer(BaseGraphConsumer):
         self.spam_threshold = spam_threshold
         self.urgent_threshold = urgent_threshold
         self.important_threshold = important_threshold
-        self.notification_callback = notification_callback
+        self.notification_callback = notification_callback or notify_message
     
     def analyze_message(self, message_content: str, identifiers: List[str]) -> AnalysisResult:
         """
-        Use an LLM to analyze the message content for spam, urgency, and importance.
-        
-        Args:
-            message_content: The content of the Slack message
-            identifiers: List of extracted identifiers from the message
-            
-        Returns:
-            An AnalysisResult with spam, urgency, and importance scores
+        Use an LLM to analyze a message for spam, urgency, and importance.
         """
-        # Construct prompt for message analysis
-        identifiers_text = ", ".join(identifiers) if identifiers else "None"
         prompt = f"""
-        Analyze this Slack message for the following factors:
-        1. Spam likelihood (0.0 to 1.0): Is this message spam/scam or legitimate?
-        2. Urgency (0.0 to 1.0): How time-sensitive or urgent is this message?
-        3. Importance (0.0 to 1.0): How important is this message for the recipient?
-        
-        Message content: "{message_content}"
-        
-        Extracted identifiers: {identifiers_text}
-        
-        Respond with scores for each factor.
-        """
-        
-        # Call the model
+Analyze this Slack message for:
+1. Spam likelihood (scale 0-1)
+2. Urgency (scale 0-1)
+3. Importance (scale 0-1)
+
+Consider these extracted identifiers: {', '.join(identifiers)}
+
+Message:
+{message_content}
+
+Provide scores and reasoning in your response.
+"""
         response = self.llm.invoke([{"role": "user", "content": prompt}])
-        
         return response
     
     def _add_analysis_identifier(self, db, analysis_type: str, analysis_data: Dict[str, Any]) -> str:
         """
-        Add an analysis identifier to the database.
-        
-        Args:
-            db: Database connection
-            analysis_type: The type of analysis (spam, urgent, important)
-            analysis_data: The analysis data to store
-            
-        Returns:
-            The ID of the inserted identifier
+        Add an analysis result document to the database.
         """
-        # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(ANALYZER_IDENTIFIERS_COLLECTION):
+        if not db.has_collection(ANALYSIS_COLLECTION):
             return None
-            
-        # Prepare document
-        doc = {
+        
+        analysis_doc = {
             "type": analysis_type,
-            "timestamp": str(datetime.datetime.utcnow())
+            "score": analysis_data.get("score", 0),
+            "reason": analysis_data.get("reason", ""),
+            "created_at": datetime.datetime.now().isoformat()
         }
         
-        # Add analysis data
-        doc.update(analysis_data)
-        
-        # Insert document
-        result = db.collection(ANALYZER_IDENTIFIERS_COLLECTION).insert(doc)
+        result = db.collection(ANALYSIS_COLLECTION).insert(analysis_doc)
         return result["_id"]
     
     def _add_edge(self, db, from_id: str, to_id: str, collection_name: str, data: Dict[str, Any] = None) -> str:
         """
-        Add an edge between two vertices.
-        
-        Args:
-            db: Database connection
-            from_id: The ID of the source vertex
-            to_id: The ID of the target vertex
-            collection_name: The name of the edge collection
-            data: Additional edge data
-            
-        Returns:
-            The ID of the inserted edge
+        Add an edge between two vertices if it doesn't already exist.
         """
-        # Check if collection exists, if not it will be created by the migration
         if not db.has_collection(collection_name):
             return None
         
-        # Prepare edge document
+        # Ensure from_id and to_id are in the correct "<collection>/<key>" format.
+        if "/" not in from_id or "/" not in to_id:
+            return None
+        
+        aql = f"""
+        FOR edge IN {collection_name}
+          FILTER edge._from == @from_id AND edge._to == @to_id
+          RETURN edge._id
+        """
+        cursor = db.aql.execute(aql, bind_vars={"from_id": from_id, "to_id": to_id})
+        edge_id = cursor.next() if cursor.has_more() else None
+        
+        if edge_id:
+            return edge_id
+        
         edge_doc = {
             "_from": from_id,
             "_to": to_id,
-            "created_at": str(datetime.datetime.utcnow())
+            "created_at": datetime.datetime.now().isoformat()
         }
-        
-        # Add optional data if provided
         if data:
             edge_doc.update(data)
         
-        # Insert edge
         result = db.collection(collection_name).insert(edge_doc)
         return result["_id"]
+    
+    def _add_slack_message(self, db, message_data: Dict[str, Any]) -> str:
+        """
+        Add a message to the slack_messages collection.
+        Also attempts to link the message to its channel (slack_channels).
+        """
+        if not db.has_collection(SLACK_MESSAGES_COLLECTION):
+            return None
         
+        # Look up the channel (from the message's "channel" field)
+        channel_name = message_data.get("channel")
+        if not channel_name:
+            return None
+            
+        aql = f"""
+        FOR ch IN {CHANNELS_COLLECTION}
+          FILTER ch.name == @name
+          RETURN ch._id
+        """
+        cursor = db.aql.execute(aql, bind_vars={"name": channel_name})
+        channel_id = cursor.next() if cursor.has_more() else None
+        
+        # Create the message document
+        message_doc = {
+            "content": message_data.get("text", ""),
+            "sender": message_data.get("user", "unknown"),
+            "timestamp": message_data.get("ts", datetime.datetime.now().isoformat()),
+            "raw_data": message_data,
+            "created_at": datetime.datetime.now().isoformat()
+        }
+        
+        result = db.collection(SLACK_MESSAGES_COLLECTION).insert(message_doc)
+        message_id = result["_id"]
+        
+        # If the channel exists, link the message to the channel using the new edge.
+        if channel_id:
+            self._add_edge(
+                db,
+                f"{CHANNELS_COLLECTION}/{channel_id}",
+                f"{SLACK_MESSAGES_COLLECTION}/{message_id}",
+                CHANNEL_MESSAGE_EDGE_COLLECTION
+            )
+            
+        return message_id
+    
     def process_message(
         self,
         user_id: str,
@@ -160,120 +181,108 @@ class SlackAnalyzer(BaseGraphConsumer):
         message_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Process a Slack message, analyze it, and store analysis in the database.
-        
-        Args:
-            user_id: The ID of the user
-            message_data: Slack message data including content
-            identifiers: List of identifiers extracted from the message
-            message_id: Optional ID of an existing message to analyze
-            
-        Returns:
-            A dictionary with the results of the analysis
+        Process and analyze a Slack message.
         """
-        # Get message content from data
-        message_content = message_data.get("content", "")
-        
-        # Analyze the message
-        analysis = self.analyze_message(message_content, identifiers)
-        
-        # Get database connection for the user
-        db = get_user_db(user_id)
-        if not db:
-            return {"error": "Failed to connect to database", "status": "failed"}
-        
         try:
-            # If no message_id provided, add the message
+            db = get_user_db(user_id)
+            if not db:
+                return {"status": "error", "message": "Failed to connect to database"}
+            
+            content = message_data.get("text", "")
+            if not content or not content.strip():
+                return {"status": "error", "message": "Message content is empty"}
+            
+            # Ensure we have a message ID by inserting the message if needed.
             if not message_id:
                 message_id = self._add_slack_message(db, message_data)
-                
-            # Process spam score
-            spam_data = {
-                "score": analysis.spam_score,
-                "threshold": self.spam_threshold
+                if not message_id:
+                    return {"status": "error", "message": "Failed to store message"}
+            
+            # Fully qualified message document ID.
+            message_doc_id = f"{SLACK_MESSAGES_COLLECTION}/{message_id}"
+            
+            # Analyze the message.
+            analysis_result = self.analyze_message(content, identifiers)
+            
+            # Add analysis results to the database.
+            spam_analysis_id = self._add_analysis_identifier(db, "spam", {
+                "score": analysis_result.spam_score,
+                "reason": analysis_result.reason
+            })
+            urgent_analysis_id = self._add_analysis_identifier(db, "urgent", {
+                "score": analysis_result.urgency_score,
+                "reason": analysis_result.reason
+            })
+            important_analysis_id = self._add_analysis_identifier(db, "important", {
+                "score": analysis_result.importance_score,
+                "reason": analysis_result.reason
+            })
+            
+            # Link analyses to the message.
+            if spam_analysis_id:
+                self._add_edge(
+                    db,
+                    message_doc_id,
+                    f"{ANALYSIS_COLLECTION}/{spam_analysis_id}",
+                    SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION,
+                    {"type": "spam"}
+                )
+            if urgent_analysis_id:
+                self._add_edge(
+                    db,
+                    message_doc_id,
+                    f"{ANALYSIS_COLLECTION}/{urgent_analysis_id}",
+                    SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION,
+                    {"type": "urgent"}
+                )
+            if important_analysis_id:
+                self._add_edge(
+                    db,
+                    message_doc_id,
+                    f"{ANALYSIS_COLLECTION}/{important_analysis_id}",
+                    SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION,
+                    {"type": "important"}
+                )
+            
+            # Determine notification conditions.
+            is_spam = analysis_result.spam_score >= self.spam_threshold
+            is_urgent = analysis_result.urgency_score >= self.urgent_threshold
+            is_important = analysis_result.importance_score >= self.important_threshold
+            
+            analysis_dict = {
+                "is_spam": is_spam,
+                "is_urgent": is_urgent,
+                "is_important": is_important,
+                "spam_score": analysis_result.spam_score,
+                "urgency_score": analysis_result.urgency_score,
+                "importance_score": analysis_result.importance_score,
+                "spam_threshold": self.spam_threshold,
+                "urgent_threshold": self.urgent_threshold,
+                "important_threshold": self.important_threshold,
+                "reason": analysis_result.reason
             }
             
-            # Process urgency score
-            urgency_data = {
-                "score": analysis.urgency_score,
-                "threshold": self.urgent_threshold
-            }
-            
-            # Process importance score
-            importance_data = {
-                "score": analysis.importance_score,
-                "threshold": self.important_threshold
-            }
-            
-            # Add analysis nodes and edges
-            spam_id = self._add_analysis_identifier(db, "spam", spam_data)
-            if spam_id and message_id:
-                self._add_edge(db, spam_id, message_id, SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "spam"})
-            
-            urgency_id = self._add_analysis_identifier(db, "urgency", urgency_data)
-            if urgency_id and message_id:
-                self._add_edge(db, urgency_id, message_id, SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "urgency"})
-            
-            importance_id = self._add_analysis_identifier(db, "importance", importance_data)
-            if importance_id and message_id:
-                self._add_edge(db, importance_id, message_id, SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "importance"})
-            
-            # Prepare results
-            analysis_result = {
-                "spam": spam_data,
-                "urgency": urgency_data,
-                "importance": importance_data,
-                "message_id": message_id
-            }
-            
-            # Call notification callback if provided and message meets notification criteria
-            should_notify = (
-                self.notification_callback and 
-                (analysis.urgency_score >= self.urgent_threshold or 
-                 analysis.importance_score >= self.important_threshold) and
-                analysis.spam_score < self.spam_threshold
-            )
-            
-            if should_notify:
-                self.notification_callback(user_id, message_data, analysis_result)
+            if self.notification_callback and (is_urgent or is_important) and not is_spam:
+                self.notification_callback(user_id, message_data, analysis_dict)
             
             return {
                 "status": "success",
-                "analysis": analysis_result
+                "message": "Message analyzed successfully",
+                "message_id": message_id,
+                "analysis": analysis_dict
             }
-        
+            
         except Exception as e:
+            import traceback
+            error_stack = traceback.format_exc()
+            print(f"Error analyzing Slack message: {str(e)}")
+            print(f"Stack trace: {error_stack}")
             return {
-                "error": str(e),
-                "status": "failed"
+                "status": "error",
+                "message": f"Error analyzing message: {str(e)}",
+                "error": str(e)
             }
     
-    def _add_slack_message(self, db, message_data: Dict[str, Any]) -> str:
-        """
-        Add a Slack message to the database.
-        
-        Args:
-            db: Database connection
-            message_data: Slack message data
-            
-        Returns:
-            The ID of the inserted message
-        """
-        # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(SLACK_MESSAGES_COLLECTION):
-            return None
-        
-        # Keep the original data structure but ensure required fields
-        message_data_copy = message_data.copy()
-        
-        # Ensure created_at field
-        if "created_at" not in message_data_copy:
-            message_data_copy["created_at"] = str(datetime.datetime.utcnow())
-            
-        # Insert document
-        result = db.collection(SLACK_MESSAGES_COLLECTION).insert(message_data_copy)
-        return result["_id"]
-
 
 def notify_message(user_id: str, message_data: Dict[str, Any], analysis: Dict[str, Any]) -> None:
     """
@@ -292,8 +301,8 @@ def notify_message(user_id: str, message_data: Dict[str, Any], analysis: Dict[st
     notification.append(f"From: {sender}")
     
     # Add urgency and importance info
-    is_urgent = analysis["urgency"]["score"] >= analysis["urgency"]["threshold"]
-    is_important = analysis["importance"]["score"] >= analysis["importance"]["threshold"]
+    is_urgent = analysis["urgency_score"] >= analysis["urgent_threshold"]
+    is_important = analysis["importance_score"] >= analysis["important_threshold"]
     
     if is_urgent:
         notification.append("🔴 URGENT MESSAGE")
@@ -307,14 +316,12 @@ def notify_message(user_id: str, message_data: Dict[str, Any], analysis: Dict[st
     notification.append(f"Message: {preview}")
     
     # Add scores
-    notification.append(f"Urgency score: {analysis['urgency']['score']:.2f}")
-    notification.append(f"Importance score: {analysis['importance']['score']:.2f}")
+    notification.append(f"Urgency score: {analysis['urgency_score']:.2f}")
+    notification.append(f"Importance score: {analysis['importance_score']:.2f}")
     
     # Print notification (in production this would send to notification service)
     print("\n".join(notification))
 
-
-# Celery task to analyze Slack messages
 @celery_app.task(name="slack.analyze_message")
 def analyze_slack_message(
     user_id: str, 
@@ -327,56 +334,40 @@ def analyze_slack_message(
 ) -> Dict[str, Any]:
     """
     Celery task to analyze a Slack message.
-    
-    Args:
-        user_id: The ID of the user
-        message_data: Slack message data
-        identifiers: List of identifiers extracted from the message
-        message_id: Optional ID of an existing message
-        spam_threshold: Threshold for spam detection
-        urgent_threshold: Threshold for urgency detection
-        important_threshold: Threshold for importance detection
-        
-    Returns:
-        A dictionary with the results of analysis
     """
     analyzer = SlackAnalyzer(
         spam_threshold=spam_threshold,
         urgent_threshold=urgent_threshold,
-        important_threshold=important_threshold,
-        notification_callback=notify_message
+        important_threshold=important_threshold
     )
     
-    return analyzer.process_message(
+    result = analyzer.process_message(
         user_id=user_id,
         message_data=message_data,
         identifiers=identifiers,
         message_id=message_id
     )
+    
+    return result
 
 
 # Test code
 if __name__ == "__main__":
-    # Sample user ID and message data for testing
     test_user_id = "1270834"
     test_message = {
-        "content": "URGENT: We need to update the dashboard project for Acme Inc by tomorrow. Please call me ASAP.",
+        "text": "URGENT: We need to update the dashboard project for Acme Inc by tomorrow. Please call me ASAP.",
         "channel": "dashboard-team",
-        "username": "user123",
-        "email": "sender@example.com",
-        "timestamp": str(datetime.datetime.utcnow())
+        "user": "user123",
+        "ts": datetime.datetime.utcnow().isoformat()
     }
-    
-    # Sample identifiers
     test_identifiers = ["urgent", "dashboard project", "acme inc", "tomorrow", "asap"]
     
-    # Call directly for testing
     result = analyze_slack_message(
         test_user_id, 
         test_message,
         test_identifiers,
-        spam_threshold=0.4,  # Lower spam threshold for testing
-        urgent_threshold=0.6,  # Lower urgency threshold for testing
+        spam_threshold=0.4,
+        urgent_threshold=0.6,
         important_threshold=0.6
     )
     
