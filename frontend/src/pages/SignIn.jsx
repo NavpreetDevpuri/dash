@@ -7,13 +7,19 @@ import { Box, Button, TextField, Typography, Container, Alert, Paper } from '@mu
 const SignIn = () => {
   const { signIn, loading } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [email, setEmail] = useState('test@example.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    if (!email || !password) {
+      setError('Email and password are required');
+      return;
+    }
+    
     const result = await signIn(email, password);
     if (result.success) {
       navigate('/');

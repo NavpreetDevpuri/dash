@@ -24,48 +24,64 @@ class User(UserMixin):
 
     @staticmethod
     def create(email, password_hash, full_name=None, is_admin=False):
-        # Use the common database to store users
-        db = get_system_db()
-        user_doc = {
-            'email': email,
-            'password': password_hash,
-            'full_name': full_name,
-            'is_admin': is_admin,
-            'created_at': datetime.utcnow().isoformat()
-        }
-        result = db.collection('users').insert(user_doc)
-        user_doc['_key'] = result['_key']
-        
-        # Create a user-specific database
-        user_id = result['_key']
-        user_db = get_user_db(user_id)  # This will create the user database if it doesn't exist
-        print(f"Created user-specific database for user {user_id}")
-        
-        return User(user_doc)
+        try:
+            # Use the common database to store users
+            db = get_system_db()
+            user_doc = {
+                'email': email,
+                'password': password_hash,
+                'full_name': full_name,
+                'is_admin': is_admin,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            
+            # Store user document in user_databases collection
+            result = db.collection('user_databases').insert(user_doc)
+            user_doc['_key'] = result['_key']
+            
+            # Get user ID from inserted document
+            user_id = result['_key']
+            
+            # Create a user-specific database - import here to avoid circular imports
+            from app.db import create_user_database
+            if create_user_database(user_id, email, password_hash):
+                logging.info(f"Created user-specific database for user {user_id}")
+            else:
+                logging.error(f"Failed to create user-specific database for user {user_id}")
+            
+            return User(user_doc)
+            
+        except Exception as e:
+            logging.error(f"Error creating user: {str(e)}")
+            logging.error(traceback.format_exc())
+            raise
 
     @classmethod
     def find_by_email(cls, email):
         """Find a user by email."""
         try:
             db = get_system_db()
-            query = "FOR u IN users FILTER u.email == @email RETURN u"
+            query = "FOR u IN user_databases FILTER u.email == @email RETURN u"
             cursor = db.aql.execute(query, bind_vars={'email': email})
-            docs = list(cursor)
-            if docs:
-                return User(docs[0])
+            user_docs = list(cursor)
+            if user_docs:
+                return cls(user_docs[0])
             return None
         except Exception as e:
             logging.error(f"Error finding user by email: {str(e)}")
-            logging.error(traceback.format_exc())
             return None
 
     @staticmethod
     def get(user_id):
-        db = get_system_db()
-        if db.collection('users').has(user_id):
-            doc = db.collection('users').get(user_id)
-            return User(doc)
-        return None
+        try:
+            db = get_system_db()
+            if db.collection('user_databases').has(user_id):
+                doc = db.collection('user_databases').get(user_id)
+                return User(doc)
+            return None
+        except Exception as e:
+            logging.error(f"Error getting user by ID: {str(e)}")
+            return None
 
 ### New: ConversationThread model
 class ConversationThread:

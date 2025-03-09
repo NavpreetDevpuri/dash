@@ -109,6 +109,16 @@ def init_app(app):
             db = get_system_db()
             logging.info(f"Successfully connected to ArangoDB at {Config.ARANGO_URL}")
             logging.info(f"Using database: {Config.ARANGO_DB_NAME}")
+            
+            # Ensure system collections exist
+            system_collections = ['users', 'user_databases']
+            for collection_name in system_collections:
+                if not db.has_collection(collection_name):
+                    db.create_collection(collection_name)
+                    logging.info(f"Created system collection: {collection_name}")
+                else:
+                    logging.info(f"System collection exists: {collection_name}")
+        
         except Exception as e:
             logging.error(f"Failed to connect to database during initialization: {str(e)}")
             # Don't crash the app, but log the error for debugging
@@ -196,25 +206,15 @@ def setup_user_collections(db):
                 contacts.add_hash_index(fields=["name"], unique=False)
             if not any(idx["fields"] == ["email"] for idx in contacts.indexes()):
                 contacts.add_hash_index(fields=["email"], unique=True)
-        
-        # Add metadata to indicate collections are set up
-        try:
-            if not db.has_collection("_system"):
-                db.create_collection("_system")
-            
-            system = db.collection("_system")
-            system.insert({
-                "_key": "collections_setup",
-                "status": "complete",
-                "collections": [c["name"] for c in collections],
-                "timestamp": datetime.datetime.utcnow().isoformat()
-            }, overwrite=True)
-        except Exception as e:
-            current_app.logger.warning(f"Could not create metadata: {str(e)}")
-        
+
         return True
         
     except Exception as e:
+        # Track the stack trace for better debugging
+        import traceback
+        stack_trace = traceback.format_exc()
+        print(f"Stack trace:\n{stack_trace}")
+        current_app.logger.error(f"Stack trace:\n{stack_trace}")
         current_app.logger.error(f"Error setting up user collections: {str(e)}")
         return False
 
@@ -281,7 +281,11 @@ def create_user_database(user_id, email, password):
             })
             
             return True
-        return False
+        return True
     except Exception as e:
+        import traceback
+        stack_trace = traceback.format_exc()
+        print(f"Stack trace:\n{stack_trace}")
         current_app.logger.error(f"Error creating user database: {str(e)}")
+        current_app.logger.error(f"Stack trace:\n{stack_trace}")
         return False

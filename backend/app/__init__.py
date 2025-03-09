@@ -2,6 +2,7 @@ from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_socketio import SocketIO
+from flask_cors import CORS
 from config import Config
 import os
 import logging
@@ -12,6 +13,7 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.signin'
 login_manager.login_message_category = 'info'
 socketio = SocketIO()
+cors = CORS()
 
 def initialize_database(db):
     """
@@ -47,6 +49,10 @@ def create_app(config_class=Config):
     bcrypt.init_app(app)
     login_manager.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*")
+    
+    # Configure CORS to allow requests from frontend
+    cors.init_app(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://yourdomain.com"]}},
+                 supports_credentials=True)
 
     # Setup database connections
     with app.app_context():
@@ -80,7 +86,7 @@ def create_app(config_class=Config):
     # Register blueprints
     from app.routes.auth import auth as auth_blueprint
     
-    app.register_blueprint(auth_blueprint, url_prefix='/auth')
+    app.register_blueprint(auth_blueprint)
 
     # Register Swagger documentation blueprint
     from app.swagger import register_swagger_routes

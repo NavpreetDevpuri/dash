@@ -1,10 +1,11 @@
 // src/components/Layout/index.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Box } from '@mui/material';
 import TopBar from './TopBar';
 import Sidebar from './Sidebar';
 import ChatWindow from './ChatWindow';
 import { fetchMessagesApi, sendMessageApi } from '../../mockApi';
+import { AuthContext } from '../../contexts/AuthContext';
 
 // Some default pinned conversation content
 const pinnedDefaultMessages = {
@@ -41,6 +42,8 @@ const Layout = () => {
 
   // For highlighting search terms
   const [highlightTerm, setHighlightTerm] = useState('');
+
+  const { logout } = useContext(AuthContext);
 
   // Load recent conversations from localStorage
   useEffect(() => {
@@ -169,11 +172,22 @@ const Layout = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('selectedConversationId');
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    try {
+      const response = await logout();
+      
+      // Even if the API call fails, proceed with local logout and redirection
+      if (!response || !response.success) {
+        console.warn('Backend logout failed, but proceeding with client-side logout');
+      }
+      
+      // Navigate to login page
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still redirect to login page even if there's an error
+      window.location.href = '/login';
+    }
   };
 
   /**

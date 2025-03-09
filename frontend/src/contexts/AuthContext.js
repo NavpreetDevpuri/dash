@@ -1,10 +1,6 @@
 // src/contexts/AuthContext.js
 import React, { createContext, useState, useEffect } from 'react';
-import {
-  signInApi,
-  signUpApi,
-  logoutApi,
-} from '../mockApi';
+import { authApi } from '../api';
 
 export const AuthContext = createContext();
 
@@ -34,26 +30,25 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     setLoading(true);
-    const response = await signInApi(email, password);
+    const response = await authApi.signIn(email, password);
     setLoading(false);
 
-    if (response.success) {
+    if (response.success && response.user) {
       setUser(response.user);
-      setToken(response.token);
+      setToken(response.user.id ? response.user.id.toString() : null);
       return { success: true };
     } else {
-      return { success: false, error: response.error };
+      return { success: false, error: response.error || 'Sign in failed' };
     }
   };
 
-  const signUp = async (email, password) => {
+  const signUp = async (email, password, fullName) => {
     setLoading(true);
-    const response = await signUpApi(email, password);
+    const response = await authApi.signUp(fullName, email, password);
     setLoading(false);
 
     if (response.success) {
-      setUser(response.user);
-      setToken(response.token);
+      // After successful signup, redirect to sign in page
       return { success: true };
     } else {
       return { success: false, error: response.error };
@@ -62,10 +57,19 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     setLoading(true);
-    await logoutApi();
+    const response = await authApi.logout();
     setLoading(false);
+    
+    // Clear application state regardless of API response
     setUser(null);
     setToken(null);
+    
+    // Explicitly remove localStorage items
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('selectedConversationId');
+    
+    return response;
   };
 
   return (

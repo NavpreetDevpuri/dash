@@ -33,5 +33,5 @@ app = create_app(Config)
 
 if __name__ == '__main__':
     # Use a different port to avoid AirPlay Receiver conflicts on macOS
-    port = int(os.environ.get('PORT', 5002))
+    port = int(os.environ.get('PORT', 5000))
     socketio.run(app, debug=True, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)

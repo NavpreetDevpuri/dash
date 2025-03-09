@@ -7,6 +7,7 @@ import { Box, Button, TextField, Typography, Container, Alert, Paper } from '@mu
 const SignUp = () => {
   const { signUp, loading } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,9 +15,15 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const result = await signUp(email, password);
+    
+    if (!fullName || !email || !password) {
+      setError('All fields are required');
+      return;
+    }
+    
+    const result = await signUp(email, password, fullName);
     if (result.success) {
-      navigate('/');
+      navigate('/login');
     } else {
       setError(result.error || 'Sign Up failed');
     }
@@ -34,6 +41,15 @@ const SignUp = () => {
           onSubmit={handleSubmit}
           sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}
         >
+          <TextField
+            label="Full Name"
+            type="text"
+            value={fullName}
+            required
+            onChange={(e) => setFullName(e.target.value)}
+            InputLabelProps={{ style: { color: '#fff' } }}
+            InputProps={{ style: { color: '#fff' } }}
+          />
           <TextField
             label="Email"
             type="email"
