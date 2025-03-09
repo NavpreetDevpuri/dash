@@ -331,10 +331,10 @@ if __name__ == "__main__":
     # Sample user ID and message data for testing
     test_user_id = "1270834"
     test_message = {
-        "content": "URGENT: We need to update the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
-        "channel": "dashboard-team",
-        "username": "user123",
-        "email": "sender@example.com",
+        "from": "john_doe",
+        "to": "nav",
+        "is_channel": False,
+        "text": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for details.",
         "timestamp": str(datetime.datetime.utcnow())
     }
     
