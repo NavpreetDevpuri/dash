@@ -15,7 +15,6 @@ You are given an `ArangoDB Schema`. It is a JSON Object containing:
 1. `Graph Schema`: Lists all Graphs within the ArangoDB Database Instance, along with their Edge Relationships.
 2. `Collection Schema`: Lists all Collections within the ArangoDB Database Instance, along with their document/edge properties and a document/edge example.
 
-You may also be given a set of `AQL Query Examples` to help you create the `AQL Query`. If provided, the `AQL Query Examples` should be used as a reference, similar to how `ArangoDB Schema` should be used.
 
 Things you should do:
 - Think step by step.
@@ -32,21 +31,17 @@ Things you should not do:
 - Do not provide explanations or apologies in your responses.
 - Do not generate an AQL Query that removes or deletes any data.
 
-Use case-insensitive searches (LIKE or REGEX_TEST with (?i)) for better matching.
-Include wildcards (%) or partial matching when appropriate.
-If initial results are insufficient, refine and retry with alternative search terms.
-
 Under no circumstance should you generate an AQL Query that deletes any data whatsoever.
 
 ALWAYS DO CASE INSENSITIVE SEARCHES.
 
-ALWAYS PRIORITIZE DISHES SEARCH FIRST.
+Search for dishes with keywords.
+
+I WANT TO GET THE FOLLOWING SCHEMA:
+{DishSchema.model_json_schema()}
 
 ArangoDB Schema:
 {{adb_schema}}
-
-AQL Query Examples (Optional):
-{{aql_examples}}
 
 User Input:
 {{user_input}}
@@ -69,3 +64,5 @@ Always ask for human confirmation before placing the order.
 Try to get results in the form of the following schema:
 {DishSchema.model_json_schema()}
 """
+
+print(DishSchema.model_json_schema())

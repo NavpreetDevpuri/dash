@@ -9,7 +9,6 @@ from langgraph.types import Command
 import sys
 import os
 
-from app.agents.foodorder.schemas import DishSchema
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.common.utils import safely_check_interrupts
@@ -87,6 +86,7 @@ class FoodOrderingAgent:
             
             # More specific dish search tool
             public_dish_search_factory(
+                user_id,
                 self.model,
                 self.public_db,
                 FOOD_AQL_GENERATION_PROMPT

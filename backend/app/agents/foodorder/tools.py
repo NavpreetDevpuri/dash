@@ -64,7 +64,7 @@ def place_order_factory(user_id: str):
     return place_order
 
 
-def public_dish_search_factory(model, arango_graph, aql_generation_prompt):
+def public_dish_search_factory(user_id: str, model, arango_graph, aql_generation_prompt):
     """Factory function to create a tool for searching the public dish database"""
     chain = ArangoGraphQAChain.from_llm(
         llm=model,
@@ -89,6 +89,7 @@ def public_dish_search_factory(model, arango_graph, aql_generation_prompt):
             Information about matching dishes
         """
         result = chain.invoke(query)
+        print(f"TOOL EXECUTION - PUBLIC DISH SEARCH from user_id: {user_id}")
         return result
     
     return public_dish_search
