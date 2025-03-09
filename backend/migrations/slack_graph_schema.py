@@ -68,8 +68,6 @@ class SlackGraphSchema(GraphSchemaBase):
         self.analysis_collection = "analysis"
         
         # Set up indices
-        self.add_index(self.contacts_collection, "slack_username", "hash", unique=True)
-        self.add_index(self.slack_channels_collection, "name", "hash", unique=True)
         self.add_index(self.identifiers_collection, "value", "hash", unique=True)
         self.add_index(self.slack_messages_collection, "timestamp", "skiplist", unique=False)
 

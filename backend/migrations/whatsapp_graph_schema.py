@@ -57,9 +57,6 @@ class WhatsAppGraphSchema(GraphSchemaBase):
         self.identifiers_collection = "identifiers"
         
         # Set up indices
-        self.add_index(self.contacts_collection, "whatsapp_number", "hash", unique=True)
-        self.add_index(self.whatsapp_groups_collection, "identifier", "hash", unique=True)
-        self.add_index(self.identifiers_collection, "value", "hash", unique=True)
         self.add_index(self.whatsapp_messages_collection, "created_at", "skiplist", unique=False)
 
 

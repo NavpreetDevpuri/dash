@@ -1,0 +1,125 @@
+{
+  "messages": [
+    {
+      "from": "emmalee",
+      "to": "project-x",
+      "is_channel": true,
+      "text": "Hey team, I've pushed the latest UI updates for ProjectX. Please review and let me know if you have any feedback. Hoping to wrap up the remaining components by EOD!",
+      "timestamp": "2023-03-05T10:30:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "UI",
+          "key": "ui_term"
+        },
+        {
+          "value": "components",
+          "key": "components_term"
+        }
+      ]
+    },
+    {
+      "from": "samhill",
+      "to": "project-x",
+      "is_channel": true,
+      "text": "I've started testing the new features of ProjectX, and so far, things look stable. A few minor UI inconsistencies, which I'll report separately. Keep up the good work!",
+      "timestamp": "2023-03-06T14:15:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "testing",
+          "key": "testing_term"
+        },
+        {
+          "value": "features",
+          "key": "features_term"
+        },
+        {
+          "value": "UI",
+          "key": "ui_term"
+        }
+      ]
+    },
+    {
+      "from": "nancyfox",
+      "to": "project-x",
+      "is_channel": true,
+      "text": "Just a reminder, everyone working on ProjectX needs to complete their compliance training by Friday. Let me know if you need any assistance!",
+      "timestamp": "2023-03-07T09:45:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "compliance training",
+          "key": "compliance_training_term"
+        },
+        {
+          "value": "Friday",
+          "key": "friday_date"
+        }
+      ]
+    },
+    {
+      "from": "tomkent",
+      "to": "project-x",
+      "is_channel": true,
+      "text": "ProjectX's infrastructure setup is almost complete. Running final tests to ensure smooth deployment. Let me know if anyone needs specific environment configurations!",
+      "timestamp": "2023-03-08T11:20:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "infrastructure",
+          "key": "infrastructure_term"
+        },
+        {
+          "value": "deployment",
+          "key": "deployment_term"
+        },
+        {
+          "value": "environment configurations",
+          "key": "env_config_term"
+        }
+      ]
+    },
+    {
+      "from": "emmalee",
+      "to": "project-x",
+      "is_channel": true,
+      "text": "Quick update: We've resolved the layout issue in ProjectX's dashboard. @samhill, let me know if it looks good from the QA perspective!",
+      "timestamp": "2023-03-09T15:05:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "dashboard",
+          "key": "dashboard_term"
+        },
+        {
+          "value": "layout",
+          "key": "layout_term"
+        },
+        {
+          "value": "@samhill",
+          "key": "samhill_mention"
+        },
+        {
+          "value": "QA",
+          "key": "qa_term"
+        }
+      ]
+    }
+  ]
+} 

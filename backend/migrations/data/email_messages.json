@@ -1,0 +1,200 @@
+{
+  "messages": [
+    {
+      "from": "emma.lee@email.com",
+      "to": "project-x",
+      "is_channel": false,
+      "subject": "Latest UI updates for ProjectX",
+      "body": "Hi team,\n\nI've pushed the latest UI updates for ProjectX. You can find the changes in the repository. Please review and let me know if you have any feedback. I'm hoping to wrap up the remaining components by EOD.\n\nBest,\nEmma",
+      "recipients": ["bob.king@email.com", "sam.hill@email.com", "tom.kent@email.com"],
+      "cc": ["alice.ray@email.com"],
+      "timestamp": "2023-03-05T10:30:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "UI",
+          "key": "ui_term"
+        },
+        {
+          "value": "components",
+          "key": "components_term"
+        },
+        {
+          "value": "repository",
+          "key": "repository_term"
+        },
+        {
+          "value": "emma.lee@email.com",
+          "key": "emma_lee_email"
+        },
+        {
+          "value": "Emma",
+          "key": "emma_name"
+        }
+      ]
+    },
+    {
+      "from": "sam.hill@email.com",
+      "to": "project-x",
+      "is_channel": false,
+      "subject": "Re: Latest UI updates for ProjectX",
+      "body": "Hi Emma,\n\nI've started testing the new features, and so far, things look stable. There are a few minor UI inconsistencies, which I'll report separately. Keep up the good work!\n\nRegards,\nSam",
+      "recipients": ["emma.lee@email.com"],
+      "cc": ["alice.ray@email.com"],
+      "timestamp": "2023-03-06T14:15:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "testing",
+          "key": "testing_term"
+        },
+        {
+          "value": "features",
+          "key": "features_term"
+        },
+        {
+          "value": "UI inconsistencies",
+          "key": "ui_inconsistencies_term"
+        },
+        {
+          "value": "sam.hill@email.com",
+          "key": "sam_hill_email"
+        },
+        {
+          "value": "Emma",
+          "key": "emma_name"
+        },
+        {
+          "value": "Sam",
+          "key": "sam_name"
+        }
+      ]
+    },
+    {
+      "from": "nancy.fox@email.com",
+      "to": "project-x",
+      "is_channel": false,
+      "subject": "Compliance Training Reminder - ProjectX Team",
+      "body": "Hello everyone,\n\nJust a reminder, everyone working on ProjectX needs to complete their compliance training by Friday. Let me know if you need any assistance with the process.\n\nThank you,\nNancy Fox\nHR Department",
+      "recipients": ["emma.lee@email.com", "bob.king@email.com", "sam.hill@email.com", "tom.kent@email.com"],
+      "cc": ["alice.ray@email.com", "john.doe@email.com"],
+      "timestamp": "2023-03-07T09:45:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "compliance training",
+          "key": "compliance_training_term"
+        },
+        {
+          "value": "Friday",
+          "key": "friday_date"
+        },
+        {
+          "value": "nancy.fox@email.com",
+          "key": "nancy_fox_email"
+        },
+        {
+          "value": "Nancy Fox",
+          "key": "nancy_fox_name"
+        },
+        {
+          "value": "HR Department",
+          "key": "hr_department"
+        }
+      ]
+    },
+    {
+      "from": "tom.kent@email.com",
+      "to": "project-x",
+      "is_channel": false,
+      "subject": "ProjectX Infrastructure Update",
+      "body": "Team,\n\nThe infrastructure setup for ProjectX is almost complete. I'm running final tests to ensure smooth deployment. Let me know if anyone needs specific environment configurations for their work.\n\nThanks,\nTom",
+      "recipients": ["emma.lee@email.com", "bob.king@email.com", "sam.hill@email.com"],
+      "cc": ["alice.ray@email.com"],
+      "timestamp": "2023-03-08T11:20:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "infrastructure",
+          "key": "infrastructure_term"
+        },
+        {
+          "value": "deployment",
+          "key": "deployment_term"
+        },
+        {
+          "value": "environment configurations",
+          "key": "env_config_term"
+        },
+        {
+          "value": "tom.kent@email.com",
+          "key": "tom_kent_email"
+        },
+        {
+          "value": "Tom",
+          "key": "tom_name"
+        }
+      ]
+    },
+    {
+      "from": "emma.lee@email.com",
+      "to": "project-x",
+      "is_channel": false,
+      "subject": "Dashboard Layout Issue Fixed",
+      "body": "Hi Sam,\n\nQuick update: We've resolved the layout issue in ProjectX's dashboard. Could you please verify if it looks good from the QA perspective? The fix addresses the alignment problems with the charts and widgets.\n\nThanks,\nEmma",
+      "recipients": ["sam.hill@email.com"],
+      "cc": ["alice.ray@email.com", "bob.king@email.com"],
+      "timestamp": "2023-03-09T15:05:00Z",
+      "identifiers": [
+        {
+          "value": "ProjectX",
+          "key": "projectx"
+        },
+        {
+          "value": "dashboard",
+          "key": "dashboard_term"
+        },
+        {
+          "value": "layout",
+          "key": "layout_term"
+        },
+        {
+          "value": "QA",
+          "key": "qa_term"
+        },
+        {
+          "value": "charts",
+          "key": "charts_term"
+        },
+        {
+          "value": "widgets",
+          "key": "widgets_term"
+        },
+        {
+          "value": "emma.lee@email.com",
+          "key": "emma_lee_email"
+        },
+        {
+          "value": "Sam",
+          "key": "sam_name"
+        },
+        {
+          "value": "Emma",
+          "key": "emma_name"
+        }
+      ]
+    }
+  ]
+} 
