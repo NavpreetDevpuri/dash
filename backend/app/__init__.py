@@ -79,10 +79,8 @@ def create_app(config_class=Config):
 
     # Register blueprints
     from app.routes.auth import auth as auth_blueprint
-    from app.routes.chat import chat as chat_blueprint
     
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
-    app.register_blueprint(chat_blueprint, url_prefix='/chat')
 
     # Register Swagger documentation blueprint
     from app.swagger import register_swagger_routes

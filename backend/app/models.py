@@ -1,5 +1,5 @@
 from flask_login import UserMixin
-from app.db import get_db, get_current_user_db
+from app.db import get_system_db, get_user_db
 from datetime import datetime
 import logging
 import traceback
@@ -25,7 +25,7 @@ class User(UserMixin):
     @staticmethod
     def create(email, password_hash, full_name=None, is_admin=False):
         # Use the common database to store users
-        db = get_db()
+        db = get_system_db()
         user_doc = {
             'email': email,
             'password': password_hash,
@@ -38,7 +38,7 @@ class User(UserMixin):
         
         # Create a user-specific database
         user_id = result['_key']
-        user_db = get_db(user_id)  # This will create the user database if it doesn't exist
+        user_db = get_user_db(user_id)  # This will create the user database if it doesn't exist
         print(f"Created user-specific database for user {user_id}")
         
         return User(user_doc)
@@ -47,7 +47,6 @@ class User(UserMixin):
     def find_by_email(cls, email):
         """Find a user by email."""
         try:
-            from app.db import get_system_db
             db = get_system_db()
             query = "FOR u IN users FILTER u.email == @email RETURN u"
             cursor = db.aql.execute(query, bind_vars={'email': email})
@@ -62,7 +61,7 @@ class User(UserMixin):
 
     @staticmethod
     def get(user_id):
-        db = get_db()
+        db = get_system_db()
         if db.collection('users').has(user_id):
             doc = db.collection('users').get(user_id)
             return User(doc)
@@ -87,7 +86,7 @@ class ConversationThread:
 
     @staticmethod
     def create(title, user_id, created_at=None):
-        db = get_db()
+        db = get_system_db()
         if created_at is None:
             created_at = datetime.utcnow().isoformat()
         thread_doc = {
@@ -101,7 +100,7 @@ class ConversationThread:
 
     @staticmethod
     def get_by_id(thread_id):
-        db = get_db()
+        db = get_system_db()
         if db.collection('threads').has(thread_id):
             doc = db.collection('threads').get(thread_id)
             return ConversationThread(doc)
@@ -109,7 +108,7 @@ class ConversationThread:
 
     @staticmethod
     def get_threads_for_user(user_id):
-        db = get_db()
+        db = get_system_db()
         query = "FOR t IN threads FILTER t.creator_id == @user_id SORT t.created_at DESC RETURN t"
         cursor = db.aql.execute(query, bind_vars={'user_id': user_id})
         return [ConversationThread(doc) for doc in cursor]
@@ -142,7 +141,7 @@ class ChatMessage:
 
     @staticmethod
     def create(thread_id, sender_id=None, content="", message_type="text", timestamp=None):
-        db = get_db()
+        db = get_system_db()
         if timestamp is None:
             timestamp = datetime.utcnow().isoformat()
         chat_doc = {
@@ -158,7 +157,7 @@ class ChatMessage:
 
     @staticmethod
     def get_messages_for_thread(thread_id):
-        db = get_db()
+        db = get_system_db()
         query = "FOR m IN chat_messages FILTER m.thread_id == @thread_id SORT m.timestamp ASC RETURN m"
         cursor = db.aql.execute(query, bind_vars={'thread_id': thread_id})
         return [ChatMessage(doc) for doc in cursor]

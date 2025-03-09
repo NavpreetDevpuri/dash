@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from app.models import User
 from flask_login import login_user, current_user, logout_user, login_required
 from app import bcrypt
-from app.db import create_user_database
+from app.db import create_user_database, get_user_db
 import datetime
 
 auth = Blueprint('auth', __name__)
@@ -37,8 +37,7 @@ def signup():
         if create_user_database(user.id, data.get('email'), hashed_pw):
             # Create a "me" document in the user's database
             try:
-                from app.db import get_db
-                user_db = get_db(user.id)
+                user_db = get_user_db(user.id)
                 
                 # Create a "me" collection if it doesn't exist
                 if not user_db.has_collection("me"):

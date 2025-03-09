@@ -163,3 +163,15 @@ print(json.dumps(arango_graph.schema, indent=2))
 query = "Who is my wife?"
 response = agent.invoke({"messages": [{"role": "user", "content": query}]})
 print(response["messages"][-1].content)
+
+
+
+import networkx as nx
+import nx_arangodb as nxadb
+
+# os.environ ...
+
+# Re-connect to the graph
+G = nxadb.Graph(name="MyGraph")
+
+nx.average_clustering()

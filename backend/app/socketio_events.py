@@ -8,7 +8,7 @@ import threading
 import uuid
 
 # Import the GatewayAgent
-from backend.app.agents.main import GatewayAgent
+from app.agents.main import GatewayAgent
 
 # Global variable to hold the agent instance
 gateway_agent = None

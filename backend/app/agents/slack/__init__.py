@@ -1,1 +1,1 @@
-from app.agents.slack.agents import SlackAgent 
+from .user_facing_agent import SlackAgent 

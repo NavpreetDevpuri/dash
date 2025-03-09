@@ -31,39 +31,9 @@ def get_system_db():
         # Re-raise to let the error handler deal with it
         raise
 
-def get_db(user_id=None):
+def get_user_db(user_id=None):
     """
-    Get a database connection.
-    
-    Args:
-        user_id: Optional user ID to get a user-specific database
-        
-    Returns:
-        ArangoDB database connection
-    """
-    if not hasattr(g, 'arango_client'):
-        g.arango_client = ArangoClient(hosts=Config.ARANGO_URL)
-    
-    # If user_id is provided, get user-specific database
-    if user_id:
-        return get_current_user_db(user_id)
-    
-    # If authenticated, use the current user's database
-    if current_user and current_user.is_authenticated:
-        return get_current_user_db(current_user.id)
-    
-    # Otherwise connect to system database with admin credentials
-    if not hasattr(g, 'arango_system_db'):
-        g.arango_system_db = g.arango_client.db(
-            '_system', 
-            username=Config.ARANGO_USERNAME, 
-            password=Config.ARANGO_PASSWORD
-        )
-    return g.arango_system_db
-
-def get_current_user_db(user_id=None):
-    """
-    Get the current user's database connection.
+    Get the database connection for a user.
     
     Args:
         user_id: User ID (if not provided, uses current user)
@@ -71,34 +41,18 @@ def get_current_user_db(user_id=None):
     Returns:
         ArangoDB database connection for the user
     """
-    if not user_id:
-        # If no user_id is provided but we're authenticated, try to get from current_user
-        if current_user and current_user.is_authenticated:
-            user_id = current_user.id
-        else:
-            # No user ID available
-            current_app.logger.warning("No user ID provided or available in context")
-            return None
-    
-    # Initialize ArangoDB client if needed
-    if not hasattr(g, 'arango_client'):
-        g.arango_client = ArangoClient(hosts=Config.ARANGO_URL)
-    
+
     # Get the database name for this user
     db_name = f"user_{user_id}"
     
     # Try to connect using the admin credentials
     try:
         # Connect to the _system database
-        sys_db = g.arango_client.db(
-            '_system', 
-            username=Config.ARANGO_USERNAME, 
-            password=Config.ARANGO_PASSWORD
-        )
-        
+        sys_db = get_system_db()
+
         # Check if the user database exists
         if not sys_db.has_database(db_name):
-            current_app.logger.error(f"Database {db_name} does not exist")
+            logging.error(f"Database {db_name} does not exist")
             return None
             
         # Check if we have user-specific credentials in the user_databases collection
@@ -115,22 +69,22 @@ def get_current_user_db(user_id=None):
             # If we have the credentials, connect using those
             if user_db_doc and 'username' in user_db_doc and 'password' in user_db_doc:
                 try:
-                    return g.arango_client.db(
+                    return client.db(
                         db_name,
                         username=user_db_doc['username'],
-                        password=user_db_doc['password']  # Use the stored hashed password
+                        password=user_db_doc['password']
                     )
                 except Exception as e:
-                    current_app.logger.error(f"Error connecting with user credentials: {str(e)}")
+                    logging.error(f"Error connecting with user credentials: {str(e)}")
         
         # Fall back to admin credentials
-        return g.arango_client.db(
+        return client.db(
             db_name,
             username=Config.ARANGO_USERNAME,
             password=Config.ARANGO_PASSWORD
         )
     except Exception as e:
-        current_app.logger.error(f"Error connecting to user database: {str(e)}")
+        logging.error(f"Error connecting to user database: {str(e)}")
         return None
 
 def close_db(e=None):
@@ -190,6 +144,26 @@ def setup_user_collections(db):
                 "name": "work_contacts",
                 "type": "document",
                 "description": "User's work-related contacts"
+            },
+            {
+                "name": "slack_messages",
+                "type": "document",
+                "description": "Slack messages"
+            },
+            {
+                "name": "identifiers",
+                "type": "document",
+                "description": "Identifiers extracted from any text content"
+            },
+            {
+                "name": "contact_message",
+                "type": "edge",
+                "description": "Edges connecting contacts to messages"
+            },
+            {
+                "name": "identifier_message",
+                "type": "edge",
+                "description": "Edges connecting identifiers to messages"
             }
         ]
         

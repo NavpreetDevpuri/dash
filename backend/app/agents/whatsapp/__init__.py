@@ -1,2 +1,2 @@
-from .agents import WhatsAppAgent
+from .main import WhatsAppAgent
 from .tools import *
