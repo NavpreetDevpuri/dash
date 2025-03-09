@@ -1,5 +1,6 @@
 from app import create_app, socketio
 from config import Config
+from flask_cors import CORS
 import logging
 import sys
 import os
@@ -30,6 +31,13 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 sys.excepthook = handle_exception
 
 app = create_app(Config)
+
+# Set up a CORS handler for OPTIONS requests
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 if __name__ == '__main__':
     # Use a different port to avoid AirPlay Receiver conflicts on macOS

@@ -51,7 +51,7 @@ def create_app(config_class=Config):
     socketio.init_app(app, cors_allowed_origins="*")
     
     # Configure CORS to allow requests from frontend
-    cors.init_app(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://yourdomain.com"]}},
+    cors.init_app(app, resources={r"/*": {"origins": "*"}},
                  supports_credentials=True)
 
     # Setup database connections
@@ -86,7 +86,7 @@ def create_app(config_class=Config):
     # Register blueprints
     from app.routes.auth import auth as auth_blueprint
     
-    app.register_blueprint(auth_blueprint)
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
     # Register Swagger documentation blueprint
     from app.swagger import register_swagger_routes
