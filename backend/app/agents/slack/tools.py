@@ -1,8 +1,9 @@
+import json
 from typing import Dict, List, Any, Optional
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_community.graphs import ArangoGraph
-from langchain_community.chains.graph_qa.arangodb import ArangoGraphQAChain
+from app.common.arangodb import ArangoGraphQAChain
 from celery import Celery
 import os
 import datetime
@@ -202,6 +203,9 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
         graph=arango_graph,
         verbose=True,
         allow_dangerous_requests=True, 
+        return_aql_result=True,
+        perform_qa=False,
+        top_k=5,
         aql_generation_prompt=aql_generation_prompt
     )
 
@@ -221,6 +225,6 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
         """
 
         result = chain.invoke(query)
-        return str(result["result"])
+        return json.dumps(result["aql_result"]) 
     
     return private_db_query 
