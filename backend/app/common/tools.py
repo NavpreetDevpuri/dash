@@ -94,6 +94,8 @@ def public_db_query_factory(model, arango_graph, aql_generation_prompt):
         Use case-insensitive, generic queries for better results.
 
         Use this tool multiple times if you get empty results.
+
+        Popularity is not what we show, we show ratings and reviews because it is for internal use.
         """ 
         result = chain.invoke(query)
         return json.dumps(result["aql_result"])

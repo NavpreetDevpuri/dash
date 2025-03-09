@@ -7,9 +7,13 @@ from app.common.arangodb import ArangoGraphQAChain
 import datetime
 from celery import Celery
 import os
+import sys
+
+# Add project root to path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 # Initialize Celery app
-celery_app = Celery('whatsapp_processing', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+celery_app = Celery('whatsapp_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 def save_contact_factory(user_id: str):
     """Factory function to create a save_contact tool with user_id closure"""
@@ -17,12 +21,12 @@ def save_contact_factory(user_id: str):
     @tool
     def save_contact(name: str, phone_number: str) -> str:
         """
-        Save a new contact to your contacts list.
+        Save a new WhatsApp contact.
         
         Args:
             name: The name of the contact
-            phone_number: The phone number of the contact
-        
+            phone_number: The phone number with country code (e.g., 14155552671)
+            
         Returns:
             Confirmation message
         """
@@ -48,29 +52,29 @@ def send_message_factory(user_id: str, whatsapp_number: str = None):
     """Factory function to create a send_message tool with user_id closure"""
     
     @tool
-    def send_message(recipient: str, message: str) -> str:
+    def send_message(recipient: str, message: str, is_group: bool = False) -> str:
         """
         Send a WhatsApp message to a contact or group.
         
         Args:
-            recipient: The phone number with country code without + symbol (e.g., 14155552671) or group name 
+            recipient: The phone number with country code without + symbol (e.g., 14155552671) or group identifier for group messages
             message: The message content to send
-        
+            is_group: Whether the recipient is a group (True) or a contact (False)
         Returns:
             Confirmation message
         """
         # Create message payload
         payload = {
             "action": "send_message", 
-            "recipient": recipient, 
-            "content": message,
-            "timestamp": str(datetime.datetime.utcnow()),
-            "phone_number": whatsapp_number,
-            "is_from_me": True,
+            "text": message,
+            "timestamp": datetime.datetime.now().isoformat(),
+            "from": whatsapp_number,
+            "to": recipient,
+            "is_group": is_group    
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
+        task_result = celery_app.send_task(
             "whatsapp.process_message",
             kwargs={
                 "user_id": user_id,
@@ -79,7 +83,10 @@ def send_message_factory(user_id: str, whatsapp_number: str = None):
         )
         
         print(f"TOOL EXECUTION: {payload}")
-        return f"Message sent to {recipient}: '{message}'"
+        
+        # Determine recipient type for confirmation message
+        recipient_type = "group" if "group_id" in payload else "contact"
+        return f"Message sent to {recipient_type} {recipient}: '{message}'"
     
     return send_message
 
@@ -95,17 +102,15 @@ def create_group_factory(user_id: str):
         Args:
             group_name: The name for the new group
             participants: Array of phone numbers to add to the group
-        
+            
         Returns:
             Confirmation message
         """
         # Create group payload
         payload = {
-            "action": "create_group", 
-            "group_name": group_name, 
-            "participants": participants,
-            "timestamp": str(datetime.datetime.utcnow()),
-            "is_from_me": True
+            "action": "create_group",
+            "group_name": group_name,
+            "participants": participants
         }
         
         # Send to Celery task for processing
@@ -133,16 +138,14 @@ def leave_group_factory(user_id: str):
         
         Args:
             group_name: The name of the group to leave
-        
+            
         Returns:
             Confirmation message
         """
         # Create payload
         payload = {
-            "action": "leave_group", 
-            "group_name": group_name,
-            "timestamp": str(datetime.datetime.utcnow()),
-            "is_from_me": True
+            "action": "leave_group",
+            "group_name": group_name
         }
         
         # Send to Celery task for processing
@@ -171,17 +174,15 @@ def add_to_group_factory(user_id: str):
         Args:
             group_name: The name of the group
             participants: Array of phone numbers to add to the group
-        
+            
         Returns:
             Confirmation message
         """
         # Create payload
         payload = {
-            "action": "add_to_group", 
-            "group_name": group_name, 
-            "participants": participants,
-            "timestamp": str(datetime.datetime.utcnow()),
-            "is_from_me": True
+            "action": "add_to_group",
+            "group_name": group_name,
+            "participants": participants
         }
         
         # Send to Celery task for processing
@@ -210,17 +211,15 @@ def remove_from_group_factory(user_id: str):
         Args:
             group_name: The name of the group
             participants: Array of phone numbers to remove from the group
-        
+            
         Returns:
             Confirmation message
         """
         # Create payload
         payload = {
-            "action": "remove_from_group", 
-            "group_name": group_name, 
-            "participants": participants,
-            "timestamp": str(datetime.datetime.utcnow()),
-            "is_from_me": True
+            "action": "remove_from_group",
+            "group_name": group_name,
+            "participants": participants
         }
         
         # Send to Celery task for processing
@@ -238,18 +237,11 @@ def remove_from_group_factory(user_id: str):
     return remove_from_group
 
 
-def private_db_query_factory(model, arango_graph, aql_generation_prompt, user_id: str):
+# Database query tools
+def private_db_query_factory(model, arango_graph, aql_generation_prompt):
     """
-    Factory function that creates a private database query tool using ArangoDB.
-    
-    Args:
-        model: LLM model for query generation
-        arango_graph: ArangoDB graph object
-        aql_generation_prompt: Prompt for AQL generation
-        user_id: User ID for the query
-        
-    Returns:
-        A tool for querying the private database
+    Factory function to create a private_db_query tool with model and graph closures.
+    This tool enables natural language queries against the private database graph.
     """
     chain = ArangoGraphQAChain.from_llm(
         llm=model,
@@ -264,16 +256,15 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt, user_id
     @tool
     def private_db_query(query: str) -> str:
         """
-        Execute a natural language query against your private messaging graph database.
-        This tool can answer questions about your messages, contacts, and conversation history.
+        Query your private WhatsApp data using natural language. This searches your messages, 
+        conversations, contacts, and any other information in your WhatsApp account.
         
         Args:
-            query: Natural language query about your messaging data
+            query: Natural language query (e.g., "Find recent messages from John about the project deadline")
             
         Returns:
-            Results from the database in a readable format
+            Query results as text
         """
-        
         # Execute the query
         result = chain.run(query)
         return result

@@ -361,11 +361,10 @@ if __name__ == "__main__":
     # Sample user ID and message data for testing
     test_user_id = "1270834"
     test_message = {
-        "content": "URGENT: We need to update the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
-        "group_name": "dashboard-team-group",
-        "phone_number": "+14155552671",
-        "name": "John Smith",
-        "timestamp": str(datetime.datetime.utcnow())
+        "text": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
+        "from": "14155552671",
+        "to": "dashboard-team-group",
+        "is_group": True
     }
     
     # Call directly for testing

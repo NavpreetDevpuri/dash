@@ -22,11 +22,11 @@ celery_app = Celery('slack', broker=os.environ.get('CELERY_BROKER_URL', 'redis:/
 CONTACTS_COLLECTION = "contacts"
 CHANNELS_COLLECTION = "slack_channels"
 MESSAGES_COLLECTION = "slack_messages"
-CONTACT_CHANNEL_EDGE_COLLECTION = "contact_slack_channel"
 IDENTIFIERS_COLLECTION = "identifiers"
-IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier_slack_message"
-CONTACT_MESSAGE_EDGE_COLLECTION = "contact_slack_message"
-CHANNEL_MESSAGE_EDGE_COLLECTION = "channel_slack_message"
+CONTACT_CHANNEL_EDGE_COLLECTION = "contact__slack_channel"
+IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier__slack_message"
+CONTACT_MESSAGE_EDGE_COLLECTION = "contact__slack_message"
+CHANNEL_MESSAGE_EDGE_COLLECTION = "channel__slack_message"
 
 class SlackConsumer:
     """
@@ -253,7 +253,6 @@ Message:
                 "identifiers": identifiers,
                 "identifier_ids": identifier_ids
             })
-            celery_app.send_task('slack.analyze_message', args=[user_id, message_data, identifiers, message_id])
             return result_data
 
         except Exception as e:

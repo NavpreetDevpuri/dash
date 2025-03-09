@@ -1,4 +1,4 @@
-from arango import ArangoClient
+from arango import ArangoClient, Optional
 from config import Config
 from flask import g, session, current_app
 import functools
@@ -7,6 +7,7 @@ import datetime
 import logging
 import traceback
 from flask_login import current_user
+from arango.database import StandardDatabase
 
 # Initialize the ArangoDB client
 client = ArangoClient(hosts=Config.ARANGO_URL)
@@ -31,7 +32,7 @@ def get_system_db():
         # Re-raise to let the error handler deal with it
         raise
 
-def get_user_db(user_id=None):
+def get_user_db(user_id=None) -> Optional[StandardDatabase]:
     """
     Get the database connection for a user.
     

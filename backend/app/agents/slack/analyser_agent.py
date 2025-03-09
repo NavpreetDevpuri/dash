@@ -17,13 +17,9 @@ from app.common.base_consumer import BaseGraphConsumer
 celery_app = Celery('slack', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 # Updated collection and edge names for our simplified graph plus extra analysis nodes
-CONTACTS_COLLECTION = "contacts"
-CHANNELS_COLLECTION = "slack_channels"              # Previously: slack_conversations
-SLACK_MESSAGES_COLLECTION = "slack_messages"
-IDENTIFIERS_COLLECTION = "identifiers"
 ANALYSIS_COLLECTION = "analysis"
 
-SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION = "slack_message_analysis"  # Edge linking message to analysis
+SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION = "slack_message__analysis"  # Edge linking message to analysis
 
 class SlackAnalyzer(BaseGraphConsumer):
     """

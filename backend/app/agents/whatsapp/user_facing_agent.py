@@ -83,6 +83,7 @@ class WhatsAppAgent:
             If you don't find any answer from aql queries, then try again with a different more broad query atleast 3 times before giving up.
 
             We don't like to have options until asked specifically, decide what is best.
+            Always end your response with a question to the user or a suggestion for what to do next or best wishes.
             """
         )
 

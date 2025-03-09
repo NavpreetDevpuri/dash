@@ -26,10 +26,14 @@ class SlackGraphSchema:
         self.slack_channels_collection = "slack_channels"
         self.slack_messages_collection = "slack_messages"
         self.identifiers_collection = "identifiers"
+        self.analysis_collection = "analysis"
         
         # Define edge collections
-        self.contact_slack_channel_edge_collection = "contact_slack_channel"
-        self.identifier_slack_message_edge_collection = "identifier_slack_message"
+        self.contact_slack_channel_edge_collection = "contact__slack_channel"
+        self.identifier_slack_message_edge_collection = "identifier__slack_message"
+        self.contact_slack_message_edge_collection = "contact__slack_message"
+        self.channel_slack_message_edge_collection = "channel__slack_message"
+        self.slack_message_analysis_edge_collection = "slack_message__analysis"
 
         # List of vertex collections for the graph
         self.orphan_collections = [
@@ -49,6 +53,21 @@ class SlackGraphSchema:
             {
                 "edge_collection": self.identifier_slack_message_edge_collection,
                 "from_vertex_collections": [self.identifiers_collection],
+                "to_vertex_collections": [self.slack_messages_collection],
+            },
+            {
+                "edge_collection": self.contact_slack_message_edge_collection,
+                "from_vertex_collections": [self.contacts_collection],
+                "to_vertex_collections": [self.slack_messages_collection],
+            },
+            {
+                "edge_collection": self.slack_message_analysis_edge_collection,
+                "from_vertex_collections": [self.slack_messages_collection],
+                "to_vertex_collections": [self.analysis_collection],
+            },
+            {
+                "edge_collection": self.channel_slack_message_edge_collection,
+                "from_vertex_collections": [self.slack_channels_collection],
                 "to_vertex_collections": [self.slack_messages_collection],
             },
         ]
@@ -72,6 +91,24 @@ class SlackGraphSchema:
         else:
             self.graph = self.db.graph("slack_data")
             print("Graph 'slack_data' already exists.")
+            
+            # Update existing graph with any new edge definitions or collections
+            for edge_def in self.edge_definitions:
+                edge_collection = edge_def["edge_collection"]
+                if not self.graph.has_edge_definition(edge_collection):
+                    self.graph.create_edge_definition(
+                        edge_collection=edge_collection,
+                        from_vertex_collections=edge_def["from_vertex_collections"],
+                        to_vertex_collections=edge_def["to_vertex_collections"]
+                    )
+                    print(f"Added new edge definition: {edge_collection}")
+            
+            # Ensure all orphan collections exist
+            for collection in self.orphan_collections:
+                if not self.db.has_collection(collection):
+                    self.db.create_collection(collection)
+                    self.graph.add_vertex_collection(collection)
+                    print(f"Added new vertex collection: {collection}")
             
     def create_indices(self):
         """Create indices on collections for faster queries."""
@@ -100,7 +137,6 @@ class SlackGraphSchema:
         if self.db.has_collection(self.slack_messages_collection):
             messages = self.db.collection(self.slack_messages_collection)
             if not any(idx["fields"] == ["timestamp"] for idx in messages.indexes()):
-                messages.add_skiplist_index(fields=["timestamp"])
                 print(f"Added skiplist index on {self.slack_messages_collection}.timestamp")
                 
     def run(self, user_id: str):
