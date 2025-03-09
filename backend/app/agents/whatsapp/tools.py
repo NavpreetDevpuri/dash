@@ -53,7 +53,7 @@ def send_message_factory(user_id: str, whatsapp_number: str = None):
         Send a WhatsApp message to a contact or group.
         
         Args:
-            recipient: The phone number with country code without + symbol (e.g., 14155552671)
+            recipient: The phone number with country code without + symbol (e.g., 14155552671) or group name 
             message: The message content to send
         
         Returns:
