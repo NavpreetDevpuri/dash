@@ -20,7 +20,7 @@ from app.agents.email.tools import (
     forward_email_factory,
     move_email_factory,
     create_folder_factory,
-    email_db_query_factory
+    private_db_query_factory
 )
 
 from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory
@@ -107,7 +107,7 @@ class EmailAgent:
             get_current_datetime,
             human_confirmation_factory(self.confirmation_callback),
             about_me_factory(self.private_db),
-            email_db_query_factory(self.model, self.private_db, EMAIL_ANALYSIS_PROMPT),
+            private_db_query_factory(self.model, self.private_db, EMAIL_ANALYSIS_PROMPT),
             public_db_query_factory(self.model, self.public_db, PUBLIC_AQL_GENERATION_PROMPT)
         ]
 
