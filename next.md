@@ -1,4 +1,4 @@
-@slack  I have this slack agent 
+ @common @slack I have this slack agent 
 - Have tools for external APIs
 - Add data to private db when sending messages through consumer
 - Have analyser_agent 
@@ -6,9 +6,9 @@
 - user facing agent with tools!
 - schemas for output types
 
-I also have whatsapp, but it need some updates like consumers
+I also have whatsapp @whatsapp , but it need some updates like consumers
 
-Now I want the similar for the other agents in dir @agents 
+Now I want the similar for the other agents in dir 
 
 ## Email agent 
 It will also have similar tools, similar consumer behaviour, on sending email i will also forward it to email consumer where it will add to db in consumer_agent for email and ignore in analyser_agent, 
@@ -36,8 +36,16 @@ This main agent will also have two functions call_llm and run_interactive (it's 
 
 
 
-@migrations And the main point is also to have only signle graph in private graph maybe name as private_graph and single graph in public db maybe named as public_graph, for that, we also need to update migrations to include all the for egde or document collections!
+And the main point is also to have only signle graph in private graph maybe name as private_graph and single graph in public db maybe named as public_graph, for that, we also need to update migrations @migrations  to include all the for egde or document collections!
 
 
 Not just that! we also need to make sue to init all the collections and graphs when user register @db.py 
 So, we don't need to have grape creation or document creation in consumers!
+
+
+there is no need for GatewayMetaSchema because now we have agents as tools and we clearly define the purpose foreach and we can rename it to main_user_facing_agent.py
+
+agent_tool_factory can be done better way, 
+We can get self.agent_graph for each agent in main user facing agent and we can simply do agent_graph.as_tool(name="", description="") to get it as tool 
+
+

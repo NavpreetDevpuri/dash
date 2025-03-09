@@ -8,29 +8,29 @@ from celery import Celery
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.db import get_system_db, get_user_db
-from app.agents.slack.schemas import Identifiers
+from app.agents.whatsapp.schemas import Identifiers
 from app.common.llm_manager import LLMManager
 from app.common.base_consumer import BaseGraphConsumer
 
 # Initialize Celery app
-celery_app = Celery('slack_consumer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+celery_app = Celery('whatsapp_consumer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
-# Collection names for Slack data
+# Collection names for WhatsApp data
 WORK_CONTACTS_COLLECTION = "work_contacts"
-SLACK_MESSAGES_COLLECTION = "slack_messages"
+WHATSAPP_MESSAGES_COLLECTION = "whatsapp_messages"
 IDENTIFIERS_COLLECTION = "identifiers"
-SLACK_CONTACT_MESSAGE_EDGE_COLLECTION = "slack_contact_message"
-SLACK_IDENTIFIER_MESSAGE_EDGE_COLLECTION = "slack_identifier_message"
+WHATSAPP_CONTACT_MESSAGE_EDGE_COLLECTION = "whatsapp_contact_message"
+WHATSAPP_IDENTIFIER_MESSAGE_EDGE_COLLECTION = "whatsapp_identifier_message"
 
-class SlackConsumer(BaseGraphConsumer):
+class WhatsAppConsumer(BaseGraphConsumer):
     """
-    A Celery consumer that processes Slack messages, extracts identifiers,
+    A Celery consumer that processes WhatsApp messages, extracts identifiers,
     and stores them in the database.
     """
     def __init__(self, model_provider: str = "openai", model_name: str = "gpt-4o-mini", 
                 temperature: float = 0):
         """
-        Initialize the SlackConsumer.
+        Initialize the WhatsAppConsumer.
         
         Args:
             model_provider: The LLM provider to use (openai, anthropic, gemini)
@@ -49,14 +49,14 @@ class SlackConsumer(BaseGraphConsumer):
         Use an LLM to extract identifiers from the message content.
         
         Args:
-            message_content: The content of the Slack message
+            message_content: The content of the WhatsApp message
             
         Returns:
             A list of identifiers
         """
         # Construct prompt for identifier extraction
         prompt = f"""
-        Extract unique identifiers from this Slack message. Identifiers could be:
+        Extract unique identifiers from this WhatsApp message. Identifiers could be:
         - Email addresses
         - Person names
         - Company names
@@ -76,14 +76,14 @@ class SlackConsumer(BaseGraphConsumer):
         # Create and return an Identifiers object with lowercase identifiers
         return [identifier.lower() for identifier in response.identifiers]
     
-    def _add_work_contact(self, db, email: str, slack_username: str) -> str:
+    def _add_work_contact(self, db, phone_number: str, name: str) -> str:
         """
         Add a contact to the work_contacts collection if it doesn't already exist.
         
         Args:
             db: Database connection
-            email: Email of the contact
-            slack_username: Slack username of the contact
+            phone_number: Phone number of the contact
+            name: Name of the contact
             
         Returns:
             The ID of the contact
@@ -95,10 +95,10 @@ class SlackConsumer(BaseGraphConsumer):
         # Check if contact already exists
         aql = f"""
         FOR contact IN {WORK_CONTACTS_COLLECTION}
-        FILTER contact.email == @email
+        FILTER contact.phone_number == @phone_number
         RETURN contact._id
         """
-        cursor = db.aql.execute(aql, bind_vars={"email": email})
+        cursor = db.aql.execute(aql, bind_vars={"phone_number": phone_number})
         results = [doc for doc in cursor]
         
         if results:
@@ -106,26 +106,26 @@ class SlackConsumer(BaseGraphConsumer):
         
         # Add new contact
         doc = {
-            "email": email,
-            "slack_username": slack_username,
+            "phone_number": phone_number,
+            "name": name,
             "created_at": str(datetime.datetime.utcnow())
         }
         result = db.collection(WORK_CONTACTS_COLLECTION).insert(doc)
         return result["_id"]
     
-    def _add_slack_message(self, db, message_data: Dict[str, Any]) -> str:
+    def _add_whatsapp_message(self, db, message_data: Dict[str, Any]) -> str:
         """
-        Add a Slack message to the database.
+        Add a WhatsApp message to the database.
         
         Args:
             db: Database connection
-            message_data: Slack message data
+            message_data: WhatsApp message data
             
         Returns:
             The ID of the inserted message
         """
         # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(SLACK_MESSAGES_COLLECTION):
+        if not db.has_collection(WHATSAPP_MESSAGES_COLLECTION):
             return None
         
         # Keep the original data structure but ensure required fields
@@ -135,7 +135,7 @@ class SlackConsumer(BaseGraphConsumer):
         if "created_at" not in message_data_copy:
             message_data_copy["created_at"] = str(datetime.datetime.utcnow())
         
-        result = db.collection(SLACK_MESSAGES_COLLECTION).insert(message_data_copy)
+        result = db.collection(WHATSAPP_MESSAGES_COLLECTION).insert(message_data_copy)
         return result["_id"]
     
     def _add_identifier(self, db, identifier: str) -> str:
@@ -208,11 +208,11 @@ class SlackConsumer(BaseGraphConsumer):
 
     def process_message(self, user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Process a Slack message, extract identifiers, and store in the database.
+        Process a WhatsApp message, extract identifiers, and store in the database.
         
         Args:
             user_id: The ID of the user
-            message_data: Slack message data including content, channel, etc.
+            message_data: WhatsApp message data including content, phone_number, etc.
             
         Returns:
             A dictionary with the results of processing
@@ -226,17 +226,17 @@ class SlackConsumer(BaseGraphConsumer):
             return {"error": "Failed to connect to database", "status": "failed"}
         
         try:
-            # Add to work_contacts if email is provided
+            # Add to work_contacts if phone_number is provided
             contact_id = None
-            if "email" in message_data and message_data["email"]:
-                contact_id = self._add_work_contact(db, message_data["email"], message_data["username"])
+            if "phone_number" in message_data and message_data["phone_number"]:
+                contact_id = self._add_work_contact(db, message_data["phone_number"], message_data.get("name", "Unknown"))
             
-            # Add slack message
-            message_id = self._add_slack_message(db, message_data)
+            # Add whatsapp message
+            message_id = self._add_whatsapp_message(db, message_data)
             
             # Link contact to message if both exist
             if contact_id and message_id:
-                self._add_edge(db, contact_id, message_id, SLACK_CONTACT_MESSAGE_EDGE_COLLECTION)
+                self._add_edge(db, contact_id, message_id, WHATSAPP_CONTACT_MESSAGE_EDGE_COLLECTION)
             
             # Process identifiers
             identifier_ids = []
@@ -247,7 +247,7 @@ class SlackConsumer(BaseGraphConsumer):
                     
                     # Add edge between identifier and message
                     if message_id:
-                        self._add_edge(db, identifier_id, message_id, SLACK_IDENTIFIER_MESSAGE_EDGE_COLLECTION)
+                        self._add_edge(db, identifier_id, message_id, WHATSAPP_IDENTIFIER_MESSAGE_EDGE_COLLECTION)
             
             return {
                 "status": "success",
@@ -262,34 +262,34 @@ class SlackConsumer(BaseGraphConsumer):
                 "status": "failed"
             }
 
-# Celery task to process Slack messages
-@celery_app.task(name="slack.process_message")
-def process_slack_message(user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
+# Celery task to process WhatsApp messages
+@celery_app.task(name="whatsapp.process_message")
+def process_whatsapp_message(user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Celery task to process a Slack message.
+    Celery task to process a WhatsApp message.
     
     Args:
         user_id: The ID of the user
-        message_data: Slack message data including content, channel, etc.
+        message_data: WhatsApp message data including content, phone_number, etc.
         
     Returns:
         A dictionary with the results of processing
     """
-    consumer = SlackConsumer()
+    consumer = WhatsAppConsumer()
     return consumer.process_message(user_id, message_data)
 
 
-# Test code for SlackConsumer
+# Test code for WhatsAppConsumer
 if __name__ == "__main__":
     # Sample user ID and message data for testing
     test_user_id = "1270834"
     test_message = {
         "content": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
-        "channel": "dashboard-team",
-        "username": "user123",  # Using username consistently instead of sender
-        "email": "sender@example.com",
+        "group_id": "dashboard-team-group",
+        "phone_number": "+14155552671",
+        "name": "John Smith",
         "timestamp": str(datetime.datetime.utcnow())
     }
     
-    result = process_slack_message(test_user_id, test_message)
-    print(result)
+    result = process_whatsapp_message(test_user_id, test_message)
+    print(result) 

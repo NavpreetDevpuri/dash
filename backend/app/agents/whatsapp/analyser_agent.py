@@ -10,19 +10,19 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from app.db import get_system_db, get_user_db
 from app.common.llm_manager import LLMManager
 from app.common.base_consumer import BaseGraphConsumer
-from app.agents.slack.schemas import AnalysisResult
+from app.agents.whatsapp.schemas import AnalysisResult
 
 # Initialize Celery app
-celery_app = Celery('slack_analyzer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+celery_app = Celery('whatsapp_analyzer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 # Collection names
-SLACK_MESSAGES_COLLECTION = "slack_messages"
+WHATSAPP_MESSAGES_COLLECTION = "whatsapp_messages"
 ANALYZER_IDENTIFIERS_COLLECTION = "analyzer_identifiers"
-SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION = "slack_message_analysis"
+WHATSAPP_MESSAGE_ANALYSIS_EDGE_COLLECTION = "whatsapp_message_analysis"
 
-class SlackAnalyzer(BaseGraphConsumer):
+class WhatsAppAnalyzer(BaseGraphConsumer):
     """
-    A service that analyzes Slack messages for spam, urgency, and importance,
+    A service that analyzes WhatsApp messages for spam, urgency, and importance,
     and adds analysis nodes to the graph database.
     """
     def __init__(
@@ -36,7 +36,7 @@ class SlackAnalyzer(BaseGraphConsumer):
         notification_callback: Optional[Callable[[str, Dict[str, Any], Dict[str, Any]], None]] = None
     ):
         """
-        Initialize the SlackAnalyzer.
+        Initialize the WhatsAppAnalyzer.
         
         Args:
             model_provider: The LLM provider to use (openai, anthropic, gemini)
@@ -64,7 +64,7 @@ class SlackAnalyzer(BaseGraphConsumer):
         Use an LLM to analyze the message content for spam, urgency, and importance.
         
         Args:
-            message_content: The content of the Slack message
+            message_content: The content of the WhatsApp message
             identifiers: List of extracted identifiers from the message
             
         Returns:
@@ -73,7 +73,7 @@ class SlackAnalyzer(BaseGraphConsumer):
         # Construct prompt for message analysis
         identifiers_text = ", ".join(identifiers) if identifiers else "None"
         prompt = f"""
-        Analyze this Slack message for the following factors:
+        Analyze this WhatsApp message for the following factors:
         1. Spam likelihood (0.0 to 1.0): Is this message spam/scam or legitimate?
         2. Urgency (0.0 to 1.0): How time-sensitive or urgent is this message?
         3. Importance (0.0 to 1.0): How important is this message for the recipient?
@@ -160,11 +160,11 @@ class SlackAnalyzer(BaseGraphConsumer):
         message_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Process a Slack message, analyze it, and store analysis in the database.
+        Process a WhatsApp message, analyze it, and store analysis in the database.
         
         Args:
             user_id: The ID of the user
-            message_data: Slack message data including content
+            message_data: WhatsApp message data including content
             identifiers: List of identifiers extracted from the message
             message_id: Optional ID of an existing message to analyze
             
@@ -185,7 +185,7 @@ class SlackAnalyzer(BaseGraphConsumer):
         try:
             # If no message_id provided, add the message
             if not message_id:
-                message_id = self._add_slack_message(db, message_data)
+                message_id = self._add_whatsapp_message(db, message_data)
                 
             # Process spam score
             spam_data = {
@@ -208,15 +208,15 @@ class SlackAnalyzer(BaseGraphConsumer):
             # Add analysis nodes and edges
             spam_id = self._add_analysis_identifier(db, "spam", spam_data)
             if spam_id and message_id:
-                self._add_edge(db, spam_id, message_id, SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "spam"})
+                self._add_edge(db, spam_id, message_id, WHATSAPP_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "spam"})
             
             urgency_id = self._add_analysis_identifier(db, "urgency", urgency_data)
             if urgency_id and message_id:
-                self._add_edge(db, urgency_id, message_id, SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "urgency"})
+                self._add_edge(db, urgency_id, message_id, WHATSAPP_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "urgency"})
             
             importance_id = self._add_analysis_identifier(db, "importance", importance_data)
             if importance_id and message_id:
-                self._add_edge(db, importance_id, message_id, SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "importance"})
+                self._add_edge(db, importance_id, message_id, WHATSAPP_MESSAGE_ANALYSIS_EDGE_COLLECTION, {"analysis_type": "importance"})
             
             # Prepare results
             analysis_result = {
@@ -248,19 +248,19 @@ class SlackAnalyzer(BaseGraphConsumer):
                 "status": "failed"
             }
     
-    def _add_slack_message(self, db, message_data: Dict[str, Any]) -> str:
+    def _add_whatsapp_message(self, db, message_data: Dict[str, Any]) -> str:
         """
-        Add a Slack message to the database.
+        Add a WhatsApp message to the database.
         
         Args:
             db: Database connection
-            message_data: Slack message data
+            message_data: WhatsApp message data
             
         Returns:
             The ID of the inserted message
         """
         # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(SLACK_MESSAGES_COLLECTION):
+        if not db.has_collection(WHATSAPP_MESSAGES_COLLECTION):
             return None
         
         # Keep the original data structure but ensure required fields
@@ -271,24 +271,24 @@ class SlackAnalyzer(BaseGraphConsumer):
             message_data_copy["created_at"] = str(datetime.datetime.utcnow())
             
         # Insert document
-        result = db.collection(SLACK_MESSAGES_COLLECTION).insert(message_data_copy)
+        result = db.collection(WHATSAPP_MESSAGES_COLLECTION).insert(message_data_copy)
         return result["_id"]
 
 
 def notify_message(user_id: str, message_data: Dict[str, Any], analysis: Dict[str, Any]) -> None:
     """
-    Default notification function for Slack message analysis.
+    Default notification function for WhatsApp message analysis.
     
     Args:
         user_id: The ID of the user
-        message_data: Slack message data
+        message_data: WhatsApp message data
         analysis: Analysis results
     """
     # Build notification message
-    notification = ["Slack Message Analysis:"]
+    notification = ["WhatsApp Message Analysis:"]
     
     # Add sender info
-    sender = message_data.get("username", "Unknown user")
+    sender = message_data.get("name", "Unknown contact")
     notification.append(f"From: {sender}")
     
     # Add urgency and importance info
@@ -314,9 +314,9 @@ def notify_message(user_id: str, message_data: Dict[str, Any], analysis: Dict[st
     print("\n".join(notification))
 
 
-# Celery task to analyze Slack messages
-@celery_app.task(name="slack.analyze_message")
-def analyze_slack_message(
+# Celery task to analyze WhatsApp messages
+@celery_app.task(name="whatsapp.analyze_message")
+def analyze_whatsapp_message(
     user_id: str, 
     message_data: Dict[str, Any],
     identifiers: List[str],
@@ -326,11 +326,11 @@ def analyze_slack_message(
     important_threshold: float = 0.6
 ) -> Dict[str, Any]:
     """
-    Celery task to analyze a Slack message.
+    Celery task to analyze a WhatsApp message.
     
     Args:
         user_id: The ID of the user
-        message_data: Slack message data
+        message_data: WhatsApp message data
         identifiers: List of identifiers extracted from the message
         message_id: Optional ID of an existing message
         spam_threshold: Threshold for spam detection
@@ -340,7 +340,7 @@ def analyze_slack_message(
     Returns:
         A dictionary with the results of analysis
     """
-    analyzer = SlackAnalyzer(
+    analyzer = WhatsAppAnalyzer(
         spam_threshold=spam_threshold,
         urgent_threshold=urgent_threshold,
         important_threshold=important_threshold,
@@ -361,9 +361,9 @@ if __name__ == "__main__":
     test_user_id = "1270834"
     test_message = {
         "content": "URGENT: We need to update the dashboard project for Acme Inc by tomorrow. Please call me ASAP.",
-        "channel": "dashboard-team",
-        "username": "user123",
-        "email": "sender@example.com",
+        "group_id": "dashboard-team-group",
+        "phone_number": "+14155552671",
+        "name": "John Smith",
         "timestamp": str(datetime.datetime.utcnow())
     }
     
@@ -371,7 +371,7 @@ if __name__ == "__main__":
     test_identifiers = ["urgent", "dashboard project", "acme inc", "tomorrow", "asap"]
     
     # Call directly for testing
-    result = analyze_slack_message(
+    result = analyze_whatsapp_message(
         test_user_id, 
         test_message,
         test_identifiers,
@@ -381,4 +381,4 @@ if __name__ == "__main__":
     )
     
     print("Analysis result:")
-    print(result)
+    print(result) 
