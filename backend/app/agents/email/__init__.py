@@ -1,0 +1,1 @@
+"""Email agent module for processing and analyzing email messages.""" 
