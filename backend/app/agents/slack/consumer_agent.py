@@ -19,9 +19,9 @@ celery_app = Celery('slack_consumer', broker=os.environ.get('CELERY_BROKER_URL',
 CONTACTS_COLLECTION = "contacts"
 CHANNELS_COLLECTION = "slack_channels"
 MESSAGES_COLLECTION = "slack_messages"
-CONTACT_CHANNEL_EDGE_COLLECTION = "contact_channel"
+CONTACT_CHANNEL_EDGE_COLLECTION = "contact_slack_channel"
 IDENTIFIERS_COLLECTION = "identifiers"
-IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier_message"
+IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier_slack_message"
 
 class SlackConsumer:
     """
