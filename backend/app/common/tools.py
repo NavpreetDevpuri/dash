@@ -10,7 +10,7 @@ def about_me_factory(arango_graph):
     def about_me() -> str:
         """
         Use this tool to get information about the user.
-        It contains information about the user's name, age, gender, location, and interests.
+        It contains information about the user's name, age, gender, email, phone, whatsapp number, slack email, slack username, location, and interests.
         """
         nonlocal cache_me_str
         try:
@@ -33,24 +33,20 @@ def human_confirmation_factory(query_callback: Callable):
     @tool
     def human_confirmation(query: str) -> str:
         """
-        Use this tool to request human confirmation before sending messages or performing actions.
-        When writing and sending content to someone, always confirm first. The query should include
-        all details about what you're sending, to whom, and the exact content. This applies to emails,
-        messages, channel changes, reservations, or any action requiring approval. Always include the
-        complete content in your confirmation request so the user knows exactly what will be sent.
-
-        When user give some suggestions, always ask for confirmation again with updated query.
+        Use this tool to request human confirmation before performing actions. Always confirm before
+        sending content, including all details about what, to whom, and the exact content. If the user
+        suggests changes, request confirmation again with the updated content.
         
         Args:
-            query: A string containing all the details of the action requiring confirmation, such as:
-                - The exact content being sent (full message text, email body, etc.)
-                - The recipient(s) (name, email, channel, etc.)
-                - The purpose or context of the action
-                - Any other relevant details (time, date, location, etc.)
-                - Use proper markdown formatting to quote the confirmation message.
+            query: String with action details including:
+                - Exact content being sent
+                - Recipient information
+                - Purpose/context
+                - Relevant details (time, date, location)
+                - Use markdown to quote the message
         
         Returns:
-            The user's response to the confirmation request
+            User's response to the confirmation request
         """
         query_callback(query)
         human_response = interrupt({"query": query})

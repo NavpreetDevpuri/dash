@@ -3,24 +3,67 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_community.graphs import ArangoGraph
 from langchain_community.chains.graph_qa.arangodb import ArangoGraphQAChain
+from celery import Celery
+import os
+import datetime
 
 
-@tool
-def send_message(channel: str, message: str) -> str:
+# Initialize Celery app
+celery_app = Celery('slack_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+
+def send_message_factory(arango_graph: ArangoGraph):
     """
-    Send a Slack message to a channel or user.
+    Factory function to create a send_message tool that includes user context.
     
     Args:
-        channel: The channel name or user email to send the message to
-        message: The message content to send
-    
-    Returns:
-        Confirmation message
+        arango_graph: ArangoDB graph connection
     """
-    # For now, just print the payload
-    payload = {"action": "send_message", "channel": channel, "message": message}
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Message sent to {channel}: '{message}'"
+    # Get user information from the 'me' collection once at tool creation time
+    try:
+        user_data = arango_graph.db.collection('me').get('me')
+        slack_username = user_data.get('slack_username', 'unknown')
+        slack_email = user_data.get('slack_email', 'unknown')
+    except Exception as e:
+        print(f"Error fetching user data: {str(e)}")
+        slack_username = 'unknown'
+        slack_email = 'unknown'
+    
+    @tool
+    def send_message(channel: str, message: str) -> str:
+        """
+        Send a Slack message to a channel or user.
+        
+        Args:
+            channel: The channel name or user email to send the message to
+            message: The message content to send
+        
+        Returns:
+            Confirmation message
+        """
+        # Create message payload with user info matching expected consumer format
+        message_data = {
+            "content": message,
+            "channel": channel,
+            "username": slack_username,
+            "email": slack_email,
+            "timestamp": str(datetime.datetime.utcnow()),
+            # Include additional identifier to mark this as from the current user
+            "is_from_me": True
+        }
+        
+        # Send to Celery task for processing
+        celery_app.send_task(
+            "slack.process_message",
+            kwargs={
+                "user_id": "me",  # This will be replaced with actual user ID in production
+                "message_data": message_data
+            }
+        )
+        
+        print(f"TOOL EXECUTION: {message_data}")
+        return f"Message sent to {channel}: '{message}'"
+    
+    return send_message
 
 
 @tool
@@ -105,29 +148,6 @@ def set_channel_topic(channel_name: str, topic: str) -> str:
     payload = {"action": "set_channel_topic", "channel_name": channel_name, "topic": topic}
     print(f"TOOL EXECUTION: {payload}")
     return f"Topic for channel '{channel_name}' set to: '{topic}'"
-
-
-@tool
-def create_thread(channel: str, message: str, parent_message_ts: str) -> str:
-    """
-    Create a thread reply to a message in a Slack channel.
-    
-    Args:
-        channel: The channel name or user email containing the parent message
-        message: The content of the thread reply
-        parent_message_ts: The timestamp of the parent message to reply to
-    
-    Returns:
-        Confirmation message
-    """
-    payload = {
-        "action": "create_thread", 
-        "channel": channel, 
-        "message": message, 
-        "parent_message_ts": parent_message_ts
-    }
-    print(f"TOOL EXECUTION: {payload}")
-    return f"Thread reply sent in {channel}: '{message}'"
 
 
 @tool

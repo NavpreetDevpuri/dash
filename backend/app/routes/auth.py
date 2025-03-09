@@ -48,7 +48,13 @@ def signup():
                     "_key": "me",
                     "full_name": data.get('full_name'),
                     "email": data.get('email'),
-                    "created_at": datetime.datetime.utcnow().isoformat()
+                    "created_at": datetime.datetime.utcnow().isoformat(),
+                    # Add Slack information
+                    "slack_username": data.get('slack_username'),
+                    "slack_email": data.get('slack_email'),
+                    # Add WhatsApp information
+                    "whatsapp_username": data.get('whatsapp_username'),
+                    "whatsapp_number": data.get('whatsapp_number')
                 }
                 user_db.collection("me").insert(me_doc, overwrite=True)
             except Exception as e:

@@ -15,13 +15,12 @@ from app.agents.slack.prompts import PRIVATE_AQL_GENERATION_PROMPT
 from app.common.prompts import PUBLIC_AQL_GENERATION_PROMPT
 
 from tools import (
-    send_message,
+    send_message_factory,
     create_channel,
     leave_channel,
     add_to_channel,
     remove_from_channel,
     set_channel_topic,
-    create_thread,
     set_status,
     set_status_with_time,
     private_db_query_factory,
@@ -88,13 +87,12 @@ class SlackAgent:
 
         # Define all tools
         agent_tools = [
-            send_message,
+            send_message_factory(self.private_db),
             create_channel,
             leave_channel,
             add_to_channel,
             remove_from_channel,
             set_channel_topic,
-            create_thread,
             set_status,
             set_status_with_time,
             get_current_datetime,

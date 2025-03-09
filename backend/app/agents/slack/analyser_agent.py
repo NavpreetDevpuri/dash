@@ -143,6 +143,33 @@ class SlackAnalyzer(BaseGraphConsumer):
         if not db:
             return {"error": "Failed to connect to database", "status": "failed"}
         
+        # Check if the message is from the current user ("me")
+        # First check the explicit flag
+        if message_data.get('is_from_me', False):
+            return {
+                "status": "skipped",
+                "reason": "Skipping analysis for message from myself (explicit flag)",
+                "message_data": message_data
+            }
+        
+        # Also check by comparing the username/email with me document
+        try:
+            me_data = db.collection('me').get('me')
+            my_slack_username = me_data.get('slack_username')
+            my_slack_email = me_data.get('slack_email')
+            
+            # Check if message is from me
+            if (my_slack_username and my_slack_username == message_data.get('username')) or \
+                (my_slack_email and my_slack_email == message_data.get('email')):
+                return {
+                    "status": "skipped",
+                    "reason": "Skipping analysis for message from myself (username/email match)",
+                    "message_data": message_data
+                }
+        except Exception as e:
+            # If there's an error checking user identity, continue processing
+            print(f"Error checking if message is from self: {str(e)}")
+        
         # Set up graph using the provided database connection
         self.setup_graph(db, "slack_analysis", ANALYZER_EDGE_DEFINITIONS, ANALYZER_ORPHAN_COLLECTIONS)
         
