@@ -8,9 +8,9 @@ from celery import Celery
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.db import get_system_db, get_user_db
-from app.agents.email.consumer_agent import EmailConsumer
-from app.agents.email.analyser_agent import EmailAnalyzer
-from app.agents.email.analyser_agent import notify_message
+from app.agents.email_agent.consumer_agent import EmailConsumer
+from app.agents.email_agent.analyser_agent import EmailAnalyzer
+from app.agents.email_agent.analyser_agent import notify_message
 
 # Initialize Celery app
 celery_app = Celery('email_processing', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
@@ -107,7 +107,7 @@ def process_folder_action(
         A dictionary with the results of the folder action
     """
     try:
-        from app.agents.email.consumer_agent import process_email_folder_action
+        from app.agents.email_agent.consumer_agent import process_email_folder_action
         return process_email_folder_action(user_id, folder_data)
     except Exception as e:
         print(f"Error processing folder action: {str(e)}")

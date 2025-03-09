@@ -8,11 +8,11 @@ from celery import Celery
 # Add project root to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from app.agents.email.analyser_agent import analyze_email_message
+from app.agents.email_agent.analyser_agent import analyze_email_message
 from app.db import get_system_db, get_user_db
-from app.agents.email.schemas import Identifiers, AttachmentInfo
+from app.agents.email_agent.schemas import Identifiers, AttachmentInfo
 from app.common.llm_manager import LLMManager
-from app.agents.email.tools import extract_email_parts, extract_email_metadata, extract_thread_info
+from app.agents.email_agent.tools import extract_email_parts, extract_email_metadata, extract_thread_info
 from arango.database import StandardDatabase
 
 # Initialize Celery app
@@ -63,7 +63,7 @@ class EmailConsumer:
             A list of identifier strings
         """
         # Import here to avoid circular imports
-        from app.agents.email.prompts import IDENTIFIER_EXTRACTION_PROMPT
+        from app.agents.email_agent.prompts import IDENTIFIER_EXTRACTION_PROMPT
         
         try:
             # Create a prompt with the email content
@@ -89,7 +89,7 @@ class EmailConsumer:
             Enhanced attachment information with analysis
         """
         # Import here to avoid circular imports
-        from app.agents.email.prompts import ATTACHMENT_ANALYSIS_PROMPT
+        from app.agents.email_agent.prompts import ATTACHMENT_ANALYSIS_PROMPT
         
         try:
             # Create a prompt with the attachment info and email content

@@ -102,7 +102,37 @@ def public_db_query_factory(model, arango_graph, aql_generation_prompt):
     
     return public_db_query
 
+def private_db_query_factory(model, arango_graph, aql_generation_prompt):
+    chain = ArangoGraphQAChain.from_llm(
+        llm=model,
+        graph=arango_graph,
+        verbose=True,
+        allow_dangerous_requests=True,
+        return_aql_result=True,
+        perform_qa=False,
+        top_k=5,
+        aql_generation_prompt=aql_generation_prompt
+    )
+    
+    @tool
+    def private_db_query(query: str) -> str:
+        """
+        Translates natural language to AQL queries for the private database (private_db).
+        
+        Contains:
+        1. User's contacts (name, phone number, email, etc.)
+        2. User's messages (content, sender, timestamp, etc.)
+        3. User's groups (name, participants, messages, etc.)
+        4. User preferences (language, timezone, etc.)
+        
+        Use case-insensitive, generic queries for better results.
 
+        Use this tool multiple times if you get empty results.
+        """ 
+        result = chain.invoke(query)
+        return json.dumps(result["aql_result"])
+    
+    return private_db_query
 
 @tool
 def text_to_nx_algorithm_to_text(query):

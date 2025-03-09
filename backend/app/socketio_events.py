@@ -8,7 +8,7 @@ import threading
 import uuid
 
 # Import the GatewayAgent
-from app.agents.main import GatewayAgent
+from backend.app.agents.main_langgraph_experiment import GatewayAgent
 
 # Global variable to hold the agent instance
 gateway_agent = None

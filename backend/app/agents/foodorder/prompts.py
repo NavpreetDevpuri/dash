@@ -64,5 +64,3 @@ Always ask for human confirmation before placing the order.
 Try to get results in the form of the following schema:
 {DishSchema.model_json_schema()}
 """
-
-print(DishSchema.model_json_schema())

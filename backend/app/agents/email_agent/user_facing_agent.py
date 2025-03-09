@@ -11,10 +11,10 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.common.utils import safely_check_interrupts
-from app.agents.email.prompts import EMAIL_ANALYSIS_PROMPT, IDENTIFIER_EXTRACTION_PROMPT, SUMMARIZATION_PROMPT
+from app.agents.email_agent.prompts import EMAIL_ANALYSIS_PROMPT, IDENTIFIER_EXTRACTION_PROMPT, SUMMARIZATION_PROMPT
 from app.common.prompts import PUBLIC_AQL_GENERATION_PROMPT
 
-from app.agents.email.tools import (
+from app.agents.email_agent.tools import (
     send_email_factory,
     reply_to_email_factory,
     forward_email_factory,

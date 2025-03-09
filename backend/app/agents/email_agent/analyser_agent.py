@@ -9,10 +9,10 @@ from celery import Celery
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from app.db import get_system_db, get_user_db
-from app.agents.email.schemas import AnalysisResult
+from app.agents.email_agent.schemas import AnalysisResult
 from app.common.llm_manager import LLMManager
 from app.common.base_consumer import BaseGraphConsumer
-from app.agents.email.tools import categorize_email
+from app.agents.email_agent.tools import categorize_email
 
 # Initialize Celery app
 celery_app = Celery('email', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
@@ -63,7 +63,7 @@ class EmailAnalyzer(BaseGraphConsumer):
             Analysis results
         """
         # Import here to avoid circular imports
-        from app.agents.email.prompts import EMAIL_ANALYSIS_PROMPT
+        from app.agents.email_agent.prompts import EMAIL_ANALYSIS_PROMPT
         
         # Create a prompt with the email content and identifiers
         prompt = EMAIL_ANALYSIS_PROMPT.format(
@@ -146,7 +146,7 @@ class EmailAnalyzer(BaseGraphConsumer):
             Email summary
         """
         # Import here to avoid circular imports
-        from app.agents.email.prompts import SUMMARIZATION_PROMPT
+        from app.agents.email_agent.prompts import SUMMARIZATION_PROMPT
         
         # For summarization, we don't need structured output
         summary_llm = LLMManager.get_model(
@@ -184,7 +184,7 @@ class EmailAnalyzer(BaseGraphConsumer):
             db = get_user_db(user_id)
             
             # Extract email content for analysis
-            from app.agents.email.tools import extract_email_parts
+            from app.agents.email_agent.tools import extract_email_parts
             email_content, _ = extract_email_parts(email_data)
             
             if not email_content:
@@ -252,7 +252,7 @@ def notify_message(user_id: str, email_data: Dict[str, Any], analysis: Dict[str,
     """
     try:
         # Extract metadata
-        from app.agents.email.tools import extract_email_metadata
+        from app.agents.email_agent.tools import extract_email_metadata
         metadata = extract_email_metadata(email_data)
         
         # Determine notification type
