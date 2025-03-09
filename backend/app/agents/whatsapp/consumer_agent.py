@@ -15,28 +15,34 @@ from app.common.base_consumer import BaseGraphConsumer
 # Initialize Celery app
 celery_app = Celery('whatsapp_consumer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
-# Collection names for WhatsApp data
-WORK_CONTACTS_COLLECTION = "work_contacts"
+# Vertex collections
+CONTACTS_COLLECTION = "contacts"
+WHATSAPP_GROUPS_COLLECTION = "whatsapp_groups"  # formerly whatsapp_conversations
 WHATSAPP_MESSAGES_COLLECTION = "whatsapp_messages"
 IDENTIFIERS_COLLECTION = "identifiers"
-WHATSAPP_CONTACT_MESSAGE_EDGE_COLLECTION = "whatsapp_contact_message"
+
+# Edge collections (all include the 'whatsapp' keyword)
+CONTACT_WHATSAPP_MESSAGE_EDGE_COLLECTION = "contact_whatsapp_message"  # For direct messages
+WHATSAPP_GROUP_MESSAGE_EDGE_COLLECTION = "whatsapp_group_message"      # For group messages
 WHATSAPP_IDENTIFIER_MESSAGE_EDGE_COLLECTION = "whatsapp_identifier_message"
 
 class WhatsAppConsumer(BaseGraphConsumer):
     """
     A Celery consumer that processes WhatsApp messages, extracts identifiers,
     and stores them in the database.
+
+    Vertex Collections:
+      • contacts: stores contact details.
+      • whatsapp_groups: stores conversations/groups.
+      • whatsapp_messages: stores messages.
+      • identifiers: stores extracted identifiers.
+      
+    Edge Collections:
+      • contact_whatsapp_message: links a contact to a message (for direct messages).
+      • whatsapp_group_message: links a group to a message (for group messages).
+      • whatsapp_identifier_message: links an identifier to a message.
     """
-    def __init__(self, model_provider: str = "openai", model_name: str = "gpt-4o-mini", 
-                temperature: float = 0):
-        """
-        Initialize the WhatsAppConsumer.
-        
-        Args:
-            model_provider: The LLM provider to use (openai, anthropic, gemini)
-            model_name: The model name to use
-            temperature: The temperature for the model
-        """
+    def __init__(self, model_provider: str = "openai", model_name: str = "gpt-4o-mini", temperature: float = 0):
         super().__init__()
         self.llm = LLMManager.get_model(
             provider=model_provider,
@@ -45,16 +51,6 @@ class WhatsAppConsumer(BaseGraphConsumer):
         ).with_structured_output(Identifiers)
     
     def extract_identifiers(self, message_content: str) -> List[str]:
-        """
-        Use an LLM to extract identifiers from the message content.
-        
-        Args:
-            message_content: The content of the WhatsApp message
-            
-        Returns:
-            A list of identifiers
-        """
-        # Construct prompt for identifier extraction
         prompt = f"""
         Extract unique identifiers from this WhatsApp message. Identifiers could be:
         - Email addresses
@@ -69,227 +65,244 @@ class WhatsAppConsumer(BaseGraphConsumer):
         Message:
         {message_content}
         """
-        
-        # Call the model
         response = self.llm.invoke([{"role": "user", "content": prompt}])
-        
-        # Create and return an Identifiers object with lowercase identifiers
         return [identifier.lower() for identifier in response.identifiers]
     
-    def _add_work_contact(self, db, phone_number: str, name: str) -> str:
-        """
-        Add a contact to the work_contacts collection if it doesn't already exist.
-        
-        Args:
-            db: Database connection
-            phone_number: Phone number of the contact
-            name: Name of the contact
-            
-        Returns:
-            The ID of the contact
-        """
-        # Check if collection exists, if not it will be created by the migration
-        if not db.has_collection(WORK_CONTACTS_COLLECTION):
+    def _add_contact(self, db, username: str, display_name: str = None, phone_number: str = None) -> str:
+        if not db.has_collection(CONTACTS_COLLECTION):
             return None
         
-        # Check if contact already exists
         aql = f"""
-        FOR contact IN {WORK_CONTACTS_COLLECTION}
-        FILTER contact.phone_number == @phone_number
-        RETURN contact._id
+        FOR contact IN {CONTACTS_COLLECTION}
+          FILTER contact.whatsapp_number == "{phone_number}"
+          RETURN contact._id
         """
-        cursor = db.aql.execute(aql, bind_vars={"phone_number": phone_number})
-        results = [doc for doc in cursor]
+        cursor = db.aql.execute(aql)
+        contact_ids = list(cursor)
         
-        if results:
-            return results[0]
+        if contact_ids:
+            return contact_ids[0]
         
-        # Add new contact
-        doc = {
-            "phone_number": phone_number,
-            "name": name,
-            "created_at": str(datetime.datetime.utcnow())
+        contact_doc = {
+            "display_name": display_name or username,
+            "whatsapp_number": phone_number,
+            "created_at": datetime.datetime.now().isoformat(),
+            "active": True
         }
-        result = db.collection(WORK_CONTACTS_COLLECTION).insert(doc)
+        result = db.collection(CONTACTS_COLLECTION).insert(contact_doc)
         return result["_id"]
     
-    def _add_whatsapp_message(self, db, message_data: Dict[str, Any]) -> str:
-        """
-        Add a WhatsApp message to the database.
+    def _add_whatsapp_group(self, db, username: str, is_group: bool = False, name: str = None) -> str:
+        if not db.has_collection(WHATSAPP_GROUPS_COLLECTION):
+            return None
         
-        Args:
-            db: Database connection
-            message_data: WhatsApp message data
-            
-        Returns:
-            The ID of the inserted message
+        aql = f"""
+        FOR group IN {WHATSAPP_GROUPS_COLLECTION}
+          FILTER group.username == "{username}"
+          RETURN group._id
         """
-        # Check if collection exists, if not it will be created by the migration
+        cursor = db.aql.execute(aql)
+        group_ids = list(cursor)
+        
+        if group_ids:
+            return group_ids[0]
+        
+        group_doc = {
+            "username": username,
+            "display_name": name or username,
+            "is_group": is_group,
+            "created_at": datetime.datetime.now().isoformat(),
+            "active": True
+        }
+        result = db.collection(WHATSAPP_GROUPS_COLLECTION).insert(group_doc)
+        return result["_id"]
+    
+    def _add_whatsapp_message(self, db, message_data: Dict[str, Any], group_id: str) -> str:
         if not db.has_collection(WHATSAPP_MESSAGES_COLLECTION):
             return None
         
-        # Keep the original data structure but ensure required fields
-        message_data_copy = message_data.copy()
-        
-        # Ensure created_at field
-        if "created_at" not in message_data_copy:
-            message_data_copy["created_at"] = str(datetime.datetime.utcnow())
-        
-        result = db.collection(WHATSAPP_MESSAGES_COLLECTION).insert(message_data_copy)
+        message_doc = {
+            "content": message_data.get("content", ""),
+            "sender": message_data.get("sender", "unknown"),
+            "timestamp": message_data.get("timestamp", datetime.datetime.now().isoformat()),
+            "raw_data": message_data,
+            "created_at": datetime.datetime.now().isoformat()
+        }
+        result = db.collection(WHATSAPP_MESSAGES_COLLECTION).insert(message_doc)
         return result["_id"]
-    
-    def _add_identifier(self, db, identifier: str) -> str:
-        """
-        Add an identifier to the database.
         
-        Args:
-            db: Database connection
-            identifier: The identifier string
-            
-        Returns:
-            The ID of the inserted identifier
-        """
-        # Check if collection exists, if not it will be created by the migration
+    def _add_identifier(self, db, identifier: str) -> str:
         if not db.has_collection(IDENTIFIERS_COLLECTION):
             return None
         
-        # Check if identifier already exists
         aql = f"""
         FOR ident IN {IDENTIFIERS_COLLECTION}
-        FILTER ident.value == @value
-        RETURN ident._id
+          FILTER ident.value == "{identifier}"
+          RETURN ident._id
         """
-        cursor = db.aql.execute(aql, bind_vars={"value": identifier})
-        results = [doc for doc in cursor]
+        cursor = db.aql.execute(aql)
+        identifier_ids = list(cursor)
         
-        if results:
-            return results[0]
+        if identifier_ids:
+            return identifier_ids[0]
         
-        # Add new identifier
-        doc = {
+        identifier_doc = {
             "value": identifier,
-            "created_at": str(datetime.datetime.utcnow())
+            "created_at": datetime.datetime.now().isoformat()
         }
-        result = db.collection(IDENTIFIERS_COLLECTION).insert(doc)
+        result = db.collection(IDENTIFIERS_COLLECTION).insert(identifier_doc)
         return result["_id"]
     
     def _add_edge(self, db, from_id: str, to_id: str, collection_name: str, data: Dict[str, Any] = None) -> str:
-        """
-        Add an edge between two vertices.
-        
-        Args:
-            db: Database connection
-            from_id: The ID of the source vertex
-            to_id: The ID of the target vertex
-            collection_name: The name of the edge collection
-            data: Additional edge data
-            
-        Returns:
-            The ID of the inserted edge
-        """
-        # Check if collection exists, if not it will be created by the migration
         if not db.has_collection(collection_name):
             return None
-        
-        # Prepare edge document
+
+        aql = f"""
+        FOR edge IN {collection_name}
+        FILTER edge._from == "{from_id}" AND edge._to == "{to_id}"
+        RETURN edge._id
+        """
+        cursor = db.aql.execute(aql)
+        edge_ids = list(cursor)
+
+        if edge_ids:
+            return edge_ids[0]
+
         edge_doc = {
             "_from": from_id,
             "_to": to_id,
-            "created_at": str(datetime.datetime.utcnow())
+            "created_at": datetime.datetime.now().isoformat()
         }
-        
-        # Add optional data if provided
         if data:
             edge_doc.update(data)
-        
-        # Insert edge
+
         result = db.collection(collection_name).insert(edge_doc)
         return result["_id"]
-
+    
     def process_message(self, user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Process a WhatsApp message, extract identifiers, and store in the database.
-        
-        Args:
-            user_id: The ID of the user
-            message_data: WhatsApp message data including content, phone_number, etc.
-            
-        Returns:
-            A dictionary with the results of processing
+        Process a WhatsApp message by extracting identifiers and storing it in the database.
+
+        Expects:
+          - "content": The message text.
+          - "group_id" (or "conversation_id"): The identifier for the WhatsApp group/conversation.
+          - "sender": The sender's username.
+          - Optionally, "sender_phone" and "sender_name".
         """
-        # Extract identifiers from message
-        identifiers = self.extract_identifiers(message_data.get("content", ""))
-        
-        # Get database connection for the user
-        db = get_user_db(user_id)
-        if not db:
-            return {"error": "Failed to connect to database", "status": "failed"}
-        
         try:
-            # Add to work_contacts if phone_number is provided
-            contact_id = None
-            if "phone_number" in message_data and message_data["phone_number"]:
-                contact_id = self._add_work_contact(db, message_data["phone_number"], message_data.get("name", "Unknown"))
+            db = get_user_db(user_id)
+            if not db:
+                return {"status": "error", "message": "Failed to connect to database"}
             
-            # Add whatsapp message
-            message_id = self._add_whatsapp_message(db, message_data)
+            content = message_data.get("content", "")
+            if not content or not content.strip():
+                return {"status": "error", "message": "Message content is empty"}
             
-            # Link contact to message if both exist
-            if contact_id and message_id:
-                self._add_edge(db, contact_id, message_id, WHATSAPP_CONTACT_MESSAGE_EDGE_COLLECTION)
+            # Use group_id (or fallback to conversation_id) as the group identifier.
+            group_identifier = message_data.get("group_id") or message_data.get("conversation_id")
+            if not group_identifier:
+                return {"status": "error", "message": "No group identifier found in message data"}
+                
+            # Add or retrieve the sender contact.
+            sender_username = message_data.get("sender")
+            sender_id = None
+            sender_phone = message_data.get("sender_phone")
+            if sender_username:
+                sender_id = self._add_contact(
+                    db, 
+                    username=sender_username,
+                    display_name=message_data.get("sender_name", sender_username),
+                    phone_number=sender_phone
+                )
             
-            # Process identifiers
+            # Determine if this is a group message based on the presence of "group_id".
+            is_group = bool(message_data.get("group_id"))
+            group_id = self._add_whatsapp_group(
+                db, 
+                username=group_identifier,
+                is_group=is_group,
+                name=message_data.get("group_name", group_identifier) if is_group else message_data.get("contact_name", group_identifier)
+            )
+            if not group_id:
+                return {"status": "error", "message": "Failed to add group to database"}
+                
+            # Insert the WhatsApp message.
+            message_id = self._add_whatsapp_message(db, message_data, group_id)
+            if not message_id:
+                return {"status": "error", "message": "Failed to add message to database"}
+            
+            # Create an edge linking the message:
+            if is_group:
+                # For group messages, link the group to the message.
+                self._add_edge(
+                    db, 
+                    group_id, 
+                    message_id,
+                    WHATSAPP_GROUP_MESSAGE_EDGE_COLLECTION
+                )
+            else:
+                # For direct (non-group) messages, link the sender contact directly to the message.
+                if sender_id:
+                    self._add_edge(
+                        db,
+                        f"{CONTACTS_COLLECTION}/{sender_id}",
+                        f"{WHATSAPP_MESSAGES_COLLECTION}/{message_id}",
+                        CONTACT_WHATSAPP_MESSAGE_EDGE_COLLECTION
+                    )
+            
+            # Extract identifiers from the message content.
+            identifiers = self.extract_identifiers(content)
+            
+            # Add identifiers to the database and create edges linking each identifier to the message.
             identifier_ids = []
             for identifier in identifiers:
                 identifier_id = self._add_identifier(db, identifier)
                 if identifier_id:
                     identifier_ids.append(identifier_id)
-                    
-                    # Add edge between identifier and message
-                    if message_id:
-                        self._add_edge(db, identifier_id, message_id, WHATSAPP_IDENTIFIER_MESSAGE_EDGE_COLLECTION)
+                    self._add_edge(
+                        db,
+                        identifier_id,
+                        message_id,
+                        WHATSAPP_IDENTIFIER_MESSAGE_EDGE_COLLECTION
+                    )
             
             return {
                 "status": "success",
+                "message": "Message processed successfully",
                 "message_id": message_id,
+                "group_id": group_id,
+                "contact_id": sender_id,
                 "identifiers": identifiers,
                 "identifier_ids": identifier_ids
             }
-        
+            
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"Error processing message: {str(e)}")
             return {
-                "error": str(e),
-                "status": "failed"
+                "status": "error",
+                "message": f"Error processing message: {str(e)}",
+                "error": str(e)
             }
 
 # Celery task to process WhatsApp messages
 @celery_app.task(name="whatsapp.process_message")
 def process_whatsapp_message(user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Celery task to process a WhatsApp message.
-    
-    Args:
-        user_id: The ID of the user
-        message_data: WhatsApp message data including content, phone_number, etc.
-        
-    Returns:
-        A dictionary with the results of processing
-    """
     consumer = WhatsAppConsumer()
     return consumer.process_message(user_id, message_data)
 
-
 # Test code for WhatsAppConsumer
 if __name__ == "__main__":
-    # Sample user ID and message data for testing
     test_user_id = "1270834"
     test_message = {
         "content": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
         "group_id": "dashboard-team-group",
-        "phone_number": "+14155552671",
-        "name": "John Smith",
-        "timestamp": str(datetime.datetime.utcnow())
+        "sender": "john_doe",
+        "sender_name": "John Doe",
+        "sender_phone": "+14155552671",
+        "timestamp": datetime.datetime.utcnow().isoformat()
     }
     
     result = process_whatsapp_message(test_user_id, test_message)
-    print(result) 
+    print(result)

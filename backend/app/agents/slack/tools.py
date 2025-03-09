@@ -199,29 +199,29 @@ def set_channel_topic_factory(user_id: str):
     
     return set_channel_topic
 
-
 def send_message_factory(user_id: str, slack_username: str = None):
     """Factory function to create a send_message tool with user_id closure"""
     
     @tool
-    def send_message(channel: str, message: str) -> str:
+    def send_message(channel: str, message: str, is_channel: bool = True) -> str:
         """
         Send a Slack message to a channel or user.
         
         Args:
             channel: The channel name or slack_username to send the message to
             message: The message content to send
+            is_channel: Whether this is a channel message (True) or direct message (False)
             
         Returns:
             Confirmation message
         """
         
         payload = {
-            "action": "send_message", 
-            "channel": channel, 
+            "from": slack_username,
+            "to": channel,
+            "is_channel": is_channel,
             "text": message,
-            "timestamp": datetime.datetime.now().isoformat(),
-            "user": slack_username  # if provided
+            "timestamp": datetime.datetime.now().isoformat()
         }
         
         celery_app.send_task(

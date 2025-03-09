@@ -14,7 +14,7 @@ from app.common.llm_manager import LLMManager
 from app.common.base_consumer import BaseGraphConsumer
 
 # Initialize Celery app
-celery_app = Celery('slack_analyzer', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+celery_app = Celery('slack', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 # Updated collection and edge names for our simplified graph plus extra analysis nodes
 CONTACTS_COLLECTION = "contacts"
@@ -23,9 +23,6 @@ SLACK_MESSAGES_COLLECTION = "slack_messages"
 IDENTIFIERS_COLLECTION = "identifiers"
 ANALYSIS_COLLECTION = "analysis"
 
-CONTACT_CHANNEL_EDGE_COLLECTION = "contact_channel"
-IDENTIFIER_MESSAGE_EDGE_COLLECTION = "identifier_message"
-CHANNEL_MESSAGE_EDGE_COLLECTION = "channel_message_edge"  # New edge linking channel to message
 SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION = "slack_message_analysis"  # Edge linking message to analysis
 
 class SlackAnalyzer(BaseGraphConsumer):
@@ -128,51 +125,7 @@ Provide scores and reasoning in your response.
         
         result = db.collection(collection_name).insert(edge_doc)
         return result["_id"]
-    
-    def _add_slack_message(self, db, message_data: Dict[str, Any]) -> str:
-        """
-        Add a message to the slack_messages collection.
-        Also attempts to link the message to its channel (slack_channels).
-        """
-        if not db.has_collection(SLACK_MESSAGES_COLLECTION):
-            return None
-        
-        # Look up the channel (from the message's "channel" field)
-        channel_name = message_data.get("channel")
-        if not channel_name:
-            return None
-            
-        aql = f"""
-        FOR ch IN {CHANNELS_COLLECTION}
-          FILTER ch.name == @name
-          RETURN ch._id
-        """
-        cursor = db.aql.execute(aql, bind_vars={"name": channel_name})
-        channel_id = cursor.next() if cursor.has_more() else None
-        
-        # Create the message document
-        message_doc = {
-            "content": message_data.get("text", ""),
-            "sender": message_data.get("user", "unknown"),
-            "timestamp": message_data.get("ts", datetime.datetime.now().isoformat()),
-            "raw_data": message_data,
-            "created_at": datetime.datetime.now().isoformat()
-        }
-        
-        result = db.collection(SLACK_MESSAGES_COLLECTION).insert(message_doc)
-        message_id = result["_id"]
-        
-        # If the channel exists, link the message to the channel using the new edge.
-        if channel_id:
-            self._add_edge(
-                db,
-                f"{CHANNELS_COLLECTION}/{channel_id}",
-                f"{SLACK_MESSAGES_COLLECTION}/{message_id}",
-                CHANNEL_MESSAGE_EDGE_COLLECTION
-            )
-            
-        return message_id
-    
+
     def process_message(
         self,
         user_id: str,
@@ -192,14 +145,6 @@ Provide scores and reasoning in your response.
             if not content or not content.strip():
                 return {"status": "error", "message": "Message content is empty"}
             
-            # Ensure we have a message ID by inserting the message if needed.
-            if not message_id:
-                message_id = self._add_slack_message(db, message_data)
-                if not message_id:
-                    return {"status": "error", "message": "Failed to store message"}
-            
-            # Fully qualified message document ID.
-            message_doc_id = f"{SLACK_MESSAGES_COLLECTION}/{message_id}"
             
             # Analyze the message.
             analysis_result = self.analyze_message(content, identifiers)
@@ -222,24 +167,24 @@ Provide scores and reasoning in your response.
             if spam_analysis_id:
                 self._add_edge(
                     db,
-                    message_doc_id,
-                    f"{ANALYSIS_COLLECTION}/{spam_analysis_id}",
+                    message_id,
+                    f"{spam_analysis_id}",
                     SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION,
                     {"type": "spam"}
                 )
             if urgent_analysis_id:
                 self._add_edge(
                     db,
-                    message_doc_id,
-                    f"{ANALYSIS_COLLECTION}/{urgent_analysis_id}",
+                    message_id,
+                    f"{urgent_analysis_id}",
                     SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION,
                     {"type": "urgent"}
                 )
             if important_analysis_id:
                 self._add_edge(
                     db,
-                    message_doc_id,
-                    f"{ANALYSIS_COLLECTION}/{important_analysis_id}",
+                    message_id,
+                    f"{important_analysis_id}",
                     SLACK_MESSAGE_ANALYSIS_EDGE_COLLECTION,
                     {"type": "important"}
                 )
@@ -349,27 +294,3 @@ def analyze_slack_message(
     )
     
     return result
-
-
-# Test code
-if __name__ == "__main__":
-    test_user_id = "1270834"
-    test_message = {
-        "text": "URGENT: We need to update the dashboard project for Acme Inc by tomorrow. Please call me ASAP.",
-        "channel": "dashboard-team",
-        "user": "user123",
-        "ts": datetime.datetime.utcnow().isoformat()
-    }
-    test_identifiers = ["urgent", "dashboard project", "acme inc", "tomorrow", "asap"]
-    
-    result = analyze_slack_message(
-        test_user_id, 
-        test_message,
-        test_identifiers,
-        spam_threshold=0.4,
-        urgent_threshold=0.6,
-        important_threshold=0.6
-    )
-    
-    print("Analysis result:")
-    print(result)
