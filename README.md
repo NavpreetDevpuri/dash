@@ -1,6 +1,26 @@
 # Dash - AI-Powered Personal Agent System
 
+> The future is personal agents, and Dash is one of them. It gives you an AI assistant that books restaurants, orders food, and manages communications by filtering spam and prioritizing urgent messages.
+
 An AI-powered platform where each user gets their own personalized agents, designed to blend natural language conversations with dynamic knowledge graph interactions. Each user's personal agent provides a modern, real-time conversational experience while integrating advanced multi-agent reasoning, graph database querying, and automated ingestion of external data sources.
+
+## 📌 Project Overview
+
+### Inspiration
+
+In today's digital world, we're drowning in information across dozens of platforms while juggling countless tasks. What if everyone had their own personal AI agent - not just another chatbot, but a truly personalized assistant that remembers everything about you, learns your preferences, and takes meaningful actions on your behalf? Dash was born from this vision of AI that works for you, understands you, and evolves with you - creating a future where personal agents transform how we interact with technology and manage our digital lives.
+
+### What it does
+
+Dash provides each user with their own personalized AI agent with powerful capabilities:
+
+- **Personalized Memory & Understanding**: Each agent maintains a persistent memory of user preferences and past interactions using a private knowledge graph database.
+
+- **Intelligent Communication Management**: Dash monitors incoming messages across email, WhatsApp, and Slack, automatically categorizing them as spam, important, or urgent, and sending appropriate notifications.
+
+- **Action-Taking Capabilities**: Agents can perform tasks through integrated services, such as booking restaurants through Dineout, ordering food from delivery services, and sending emails (with draft confirmation).
+
+*Note: Currently, all API integrations (WhatsApp, Slack, email, Dineout, food ordering) are implemented as mock services for development purposes, not connected to real external APIs.*
 
 ## 🚀 Features
 
@@ -50,7 +70,7 @@ These simulated integrations allow for development and testing of the agent logi
 ## 🛠️ Technical Stack
 
 - **Frontend**: 
-  - ReactJS with Material UI
+  - ReactJS with Material UI (in progress)
   - WebSocket client for real-time updates
   - Responsive design for multiple device types
 
@@ -66,6 +86,47 @@ These simulated integrations allow for development and testing of the agent logi
 - **Testing**:
   - Comprehensive Python test suite
   - End-to-end testing for critical user flows
+
+## 🧩 How I Built It
+
+- **Agent Framework**: Core intelligence uses LangChain and LangGraph to orchestrate complex reasoning flows, allowing the agent to determine when to query databases and when to take actions.
+
+- **Knowledge Storage**: I implemented ArangoDB as a graph database, with each user getting their own private database (`user_{user_id}`) alongside access to a shared, read-only `common_db`. This architecture provides a secure way to have multiple users while ensuring they can't access each other's data.
+
+- **Consumer Agents**: Specialized Celery-based agents monitor external message sources, using LLMs to extract relevant identifiers and update the knowledge graph. These agents also analyze messages to classify them as spam, important, or urgent, sending appropriate notifications to users.
+
+## 🧗 Challenges I Ran Into
+
+1. **Getting data for the agent**
+   - Solution: Obtained sample restaurant data from www.foodspark.io after contacting them.
+
+2. **How to have ArangoDB database sharing by all users while maintaining data privacy**
+   - Solution: Created a private database and user in ArangoDB for each Dash user. Like password hashes, I store these DB credentials in the _system database which only my backend can access. Additionally, I have a common database with read access for everyone containing restaurant data, dishes, prices, and ratings.
+
+3. **Limited support for defining custom nodes and edges when importing data**
+   - Solution: Wrote a custom importer with parallelization to import exponentially faster while maintaining proper node types and connections.
+
+4. **Lack of resources for low-level design of personal agent systems**
+   - Solution: After creative thinking, developed a design using LangChain, LangGraph, and Celery. Determined which prompts work effectively and how a personal agent should be implemented to be flexible for extensions and scalable.
+
+5. **UI development challenges as a backend developer**
+
+6. **Finding the most cost-effective and scalable agent implementation**
+   - Solution: Kept prompts concise and removed unnecessary LLM calls. Modified ArangoGraphQAChain to support turning off LLM QA generation when only raw AQL query output is needed.
+
+7. **Running LLM-generated code securely and efficiently**
+   - Solution: Implemented a sandbox execution environment using Docker with Jupyter notebooks, with one cell loading the database into NetworkX and another cell for model-generated code.
+
+8. **Limiting events and tools to the user level**
+   - Solution: Implemented a factory design pattern where all tools and agents are generated for each user based on user ID, providing access only to that user's private database.
+
+## 🏆 Accomplishments
+
+I'm proud of my creative problem-solving approach, finding innovative solutions to challenging technical problems. From database isolation techniques to secure code execution, I've developed a robust architecture that separates user data while maintaining shared knowledge. My optimization of LLM usage and custom importers demonstrates my commitment to building not just a functional system, but one that can scale efficiently.
+
+## 📚 What I Learned
+
+Through developing Dash, I gained deep expertise in agentic frameworks like LangChain and LangGraph, effective prompt engineering techniques, and UI development basics. Most importantly, I discovered the power of ArangoDB as a graph database solution, which has become my favorite database technology for its flexibility and performance in knowledge graph applications.
 
 ## 📋 Requirements
 
@@ -196,6 +257,11 @@ dash/
 4. ⬜ Admin simulation interface with Blockly
 5. ⬜ Comprehensive test coverage
 6. ⬜ Production deployment pipeline
+7. ⬜ Frontend implementation with React and Material UI
+
+## 🔭 What's Next for Dash
+
+I plan to continue development during weekends and free time, focusing on implementing the UI, improving various tools, and exploring different approaches to writing agents. My goal is to steadily enhance Dash's capabilities while maintaining its core vision of providing truly personal AI agents that understand and act according to each user's unique needs and preferences.
 
 ## 🔧 Development Guidelines
 
