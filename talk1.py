@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from arango import ArangoClient
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
@@ -14,15 +15,15 @@ import nx_arangodb as nxadb
 os.environ["DATABASE_HOST"] = "http://localhost:8529"
 os.environ["DATABASE_USERNAME"] = "root"
 os.environ["DATABASE_PASSWORD"] = "zxcv"
-os.environ["DATABASE_NAME"] = "user_1235"
+os.environ["DATABASE_NAME"] = "common_db"
 
-# G_adb = nxadb.Graph(name="restaurants")
+G_adb = nxadb.Graph(name="restaurants")
 
-# print(G_adb.number_of_nodes(), G_adb.number_of_edges())
+print(G_adb.number_of_nodes(), G_adb.number_of_edges())
 
 # 1. Connect to ArangoDB
 db_client = ArangoClient(hosts="http://localhost:8529")
-db = db_client.db("user_1235", username="root", password="zxcv", verify=True)
+db = db_client.db("common_db", username="root", password="zxcv", verify=True)
 arango_graph = ArangoGraph(db)
 
 AQL_GENERATION_TEMPLATE = """Task: Generate an ArangoDB Query Language (AQL) query from a User Input.
@@ -160,18 +161,22 @@ agent = create_react_agent(llm, tools)
 
 print(json.dumps(arango_graph.schema, indent=2))
 # 5. Query the agent
-query = "Who is my wife?"
-response = agent.invoke({"messages": [{"role": "user", "content": query}]})
-print(response["messages"][-1].content)
-
-
-
-import networkx as nx
-import nx_arangodb as nxadb
-
-# os.environ ...
-
-# Re-connect to the graph
-G = nxadb.Graph(name="MyGraph")
-
-nx.average_clustering()
+# Interactive loop to keep asking questions
+thread_id = str(uuid.uuid4())
+while True:
+    # Get user input
+    query = input("Ask a question (or type 'exit' to quit): ")
+    
+    # Check if user wants to exit
+    if query.lower() == 'exit':
+        break
+    
+    # Create input for the agent
+    inputs = {"messages": [{"role": "user", "content": query}]}
+    
+    # Invoke the agent
+    response = agent.invoke(inputs)
+    
+    # Print the response
+    print(response["messages"][-1].content)
+    print("-" * 50)

@@ -1,4 +1,4 @@
-@slack I have this slack agent 
+@slack  I have this slack agent 
 - Have tools for external APIs
 - Add data to private db when sending messages through consumer
 - Have analyser_agent 
@@ -35,3 +35,9 @@ Now it comes to main_user_facing_agent @main.py , right now it is just having ba
 This main agent will also have two functions call_llm and run_interactive (it's interactive will still call call_llm for nested tool agents)
 
 
+
+@migrations And the main point is also to have only signle graph in private graph maybe name as private_graph and single graph in public db maybe named as public_graph, for that, we also need to update migrations to include all the for egde or document collections!
+
+
+Not just that! we also need to make sue to init all the collections and graphs when user register @db.py 
+So, we don't need to have grape creation or document creation in consumers!
