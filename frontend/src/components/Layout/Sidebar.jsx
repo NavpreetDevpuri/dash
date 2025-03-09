@@ -18,14 +18,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 
-const pinnedItems = [
-  { id: 1, label: 'Food order', icon: '🍔', count: 1 },
-  { id: 2, label: 'Dineout booking', icon: '🍽️', count: 2 },
-  { id: 3, label: 'Calendar', icon: '📅', count: 3 },
-  { id: 4, label: 'Email', icon: '📧', count: 4 },
-  { id: 5, label: 'Messages', icon: '💬', count: 5 },
-];
-
 const Sidebar = ({
   selectedId,
   onSelectConversation,
@@ -62,49 +54,8 @@ const Sidebar = ({
         p: 0,
       }}
     >
-      {/* Pinned Items */}
-      <Box
-        sx={{
-          flexShrink: 0,
-          overflowY: 'auto',
-          maxHeight: '40%',
-          '&::-webkit-scrollbar': { width: 8, backgroundColor: '#222' },
-          '&::-webkit-scrollbar-thumb': { backgroundColor: '#555' },
-        }}
-      >
-        <List>
-          {pinnedItems.map((item) => (
-            <React.Fragment key={item.id}>
-              <ListItem
-                button
-                selected={item.id === selectedId}
-                onClick={() => onSelectConversation(item.id)}
-                secondaryAction={
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      backgroundColor: 'secondary.main',
-                      borderRadius: '50%',
-                      padding: '4px',
-                      minWidth: 24,
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {item.count}
-                  </Typography>
-                }
-              >
-                <ListItemText primary={`${item.icon} ${item.label}`} />
-              </ListItem>
-              <Divider />
-            </React.Fragment>
-          ))}
-        </List>
-      </Box>
-
       {/* Recent Conversations Header */}
-      <Box sx={{ pl: 2, py: 1, borderTop: '1px solid #444' }}>
+      <Box sx={{ pl: 2, py: 1 }}>
         <Typography variant="subtitle1">Recent Conversations</Typography>
       </Box>
 
