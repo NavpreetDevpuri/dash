@@ -8,7 +8,7 @@
 
 I also have whatsapp, but it need some updates like consumers
 
-Now I want the similar for the other agents 
+Now I want the similar for the other agents in dir @agents 
 
 ## Email agent 
 It will also have similar tools, similar consumer behaviour, on sending email i will also forward it to email consumer where it will add to db in consumer_agent for email and ignore in analyser_agent, 
