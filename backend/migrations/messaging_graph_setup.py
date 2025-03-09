@@ -56,75 +56,27 @@ class MessagingGraphSetup:
         # Define edge collections for all messaging platforms
         self.edge_collections = [
             # Slack edges
-            "slack_sent_by",
-            "slack_sent_to",
             "slack_member_of",
-            "slack_reacted_to",
-            "slack_mentioned_in",
-            "slack_attached_to",
             
             # WhatsApp edges
-            "whatsapp_sent_by",
-            "whatsapp_sent_to",
             "whatsapp_member_of",
-            "whatsapp_has_media"
         ]
         
         # Define edge definitions for the private graph
         self.edge_definitions = [
             # Slack edge definitions
             {
-                "edge_collection": "slack_sent_by",
-                "from_vertex_collections": ["slack_users"],
-                "to_vertex_collections": ["slack_messages"]
-            },
-            {
-                "edge_collection": "slack_sent_to",
-                "from_vertex_collections": ["slack_messages"],
-                "to_vertex_collections": ["slack_channels"]
-            },
-            {
                 "edge_collection": "slack_member_of",
                 "from_vertex_collections": ["slack_users"],
                 "to_vertex_collections": ["slack_channels"]
             },
-            {
-                "edge_collection": "slack_reacted_to",
-                "from_vertex_collections": ["slack_users"],
-                "to_vertex_collections": ["slack_messages"]
-            },
-            {
-                "edge_collection": "slack_mentioned_in",
-                "from_vertex_collections": ["slack_users"],
-                "to_vertex_collections": ["slack_messages"]
-            },
-            {
-                "edge_collection": "slack_attached_to",
-                "from_vertex_collections": ["slack_files"],
-                "to_vertex_collections": ["slack_messages"]
-            },
             
             # WhatsApp edge definitions
-            {
-                "edge_collection": "whatsapp_sent_by",
-                "from_vertex_collections": ["whatsapp_contacts"],
-                "to_vertex_collections": ["whatsapp_messages"]
-            },
-            {
-                "edge_collection": "whatsapp_sent_to",
-                "from_vertex_collections": ["whatsapp_messages"],
-                "to_vertex_collections": ["whatsapp_groups", "whatsapp_contacts"]
-            },
             {
                 "edge_collection": "whatsapp_member_of",
                 "from_vertex_collections": ["whatsapp_contacts"],
                 "to_vertex_collections": ["whatsapp_groups"]
             },
-            {
-                "edge_collection": "whatsapp_has_media",
-                "from_vertex_collections": ["whatsapp_messages"],
-                "to_vertex_collections": ["whatsapp_media"]
-            }
         ]
         
         # Database connection

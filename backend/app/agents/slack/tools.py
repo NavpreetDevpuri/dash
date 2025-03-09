@@ -224,8 +224,8 @@ def send_message_factory(user_id: str, slack_username: str = None, slack_email: 
         message_data = {
             "content": message,
             "channel": channel,
-            "username": slack_username,
-            "email": slack_email,
+            "sender_username": slack_username,
+            "sender_email": slack_email,
             "timestamp": str(datetime.datetime.utcnow()),
             # Include additional identifier to mark this as from the current user
             "is_from_me": True

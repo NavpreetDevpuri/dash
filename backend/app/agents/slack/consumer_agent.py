@@ -262,23 +262,6 @@ class SlackConsumer(BaseGraphConsumer):
                 "status": "failed"
             }
 
-# Celery task to process Slack messages
-@celery_app.task(name="slack.process_message")
-def process_slack_message(user_id: str, message_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Celery task to process a Slack message.
-    
-    Args:
-        user_id: The ID of the user
-        message_data: Slack message data including content, channel, etc.
-        
-    Returns:
-        A dictionary with the results of processing
-    """
-    consumer = SlackConsumer()
-    return consumer.process_message(user_id, message_data)
-
-
 # Test code for SlackConsumer
 if __name__ == "__main__":
     # Sample user ID and message data for testing
@@ -286,10 +269,10 @@ if __name__ == "__main__":
     test_message = {
         "content": "Hi, I'm working on the dashboard project for Acme Inc. Please contact john.doe@example.com for more details.",
         "channel": "dashboard-team",
-        "username": "user123",  # Using username consistently instead of sender
-        "email": "sender@example.com",
+        "sender_username": "user123",  # Using username consistently instead of sender
+        "sender_email": "sender@example.com",
         "timestamp": str(datetime.datetime.utcnow())
     }
     
-    result = process_slack_message(test_user_id, test_message)
+    result = SlackConsumer().process_message(test_user_id, test_message)
     print(result)
