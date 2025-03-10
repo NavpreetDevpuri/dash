@@ -7,11 +7,6 @@ import os
 import sys
 from arango import ArangoClient
 
-# Add project root to path for imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
-
-from app.db import get_system_db, get_user_db
-
 class GraphSchemaBase:
     """Base utility class to set up graph schemas in ArangoDB."""
     
@@ -58,16 +53,18 @@ class GraphSchemaBase:
             "unique": unique
         })
     
-    def setup_db(self, user_id: str):
+    def setup_db(self, db_name: str, host: str, username: str, password: str):
         """
         Connect to the user's database and set up the graph.
         
         Args:
-            user_id: User ID to get database connection for
+            host: Host to connect to
+            username: Username to connect with
+            password: Password to connect with
         """
-        self.db = get_user_db(user_id)
+        self.db = ArangoClient(database=db_name, host=host, username=username, password=password)
         if not self.db:
-            raise Exception(f"Failed to connect to database for user {user_id}")
+            raise Exception(f"Failed to connect to database")
 
         if not self.db.has_graph(self.graph_name):
             self.graph = self.db.create_graph(
@@ -118,13 +115,15 @@ class GraphSchemaBase:
                         
                         print(f"Added {idx_type} index on {collection_name}.{field}")
     
-    def run(self, user_id: str):
+    def run(self, host: str, username: str, password: str):
         """
         Set up the database and graph schema for a specific user.
         
         Args:
-            user_id: User ID to set up schema for
+            host: Host to connect to
+            username: Username to connect with
+            password: Password to connect with
         """
-        self.setup_db(user_id)
+        self.setup_db(host, username, password)
         self.create_indices()
-        print(f"{self.graph_name} graph schema setup complete for user {user_id}.") 
+        print(f"{self.graph_name} graph schema setup complete.") 

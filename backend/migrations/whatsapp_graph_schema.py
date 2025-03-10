@@ -61,6 +61,5 @@ class WhatsAppGraphSchema(GraphSchemaBase):
 
 
 if __name__ == "__main__":
-    test_user_id = "1270834"
     schema = WhatsAppGraphSchema()
-    schema.run(test_user_id)
+    schema.run(db_name="user_1270834", host="http://127.0.0.1:8529", username="root", password="zxcv")

@@ -6,10 +6,6 @@ import os
 import sys
 from arango import ArangoClient
 
-# Add project root to path for imports
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
-
-from app.db import get_system_db, get_user_db
 from migrations.utils.graph_schema_base import GraphSchemaBase
 
 class EmailGraphSchema(GraphSchemaBase):
@@ -81,6 +77,5 @@ class EmailGraphSchema(GraphSchemaBase):
 
 
 if __name__ == "__main__":
-    test_user_id = "1270834"
     schema = EmailGraphSchema()
-    schema.run(test_user_id) 
+    schema.run(db_name="user_1270834", host="http://127.0.0.1:8529", username="root", password="zxcv") 

@@ -17,22 +17,23 @@ from app.db import get_system_db, get_user_db
 class SlackMessagesImporter:
     """Class to import Slack messages with identifiers from JSON file."""
     
-    def __init__(self, user_id, contacts_path, messages_path, host="http://localhost:8529", 
-                 username="root", password="zxcv"):
+    def __init__(self, db_name, host="https://afc3138ddacc.arangodb.cloud", 
+                 username="root", password="Jav9ZvTdowF3q66xXEiv"):
         """
         Initialize the SlackMessagesImporter.
         
         Args:
-            user_id: User ID to import data for
+            db_name: Database name to import data for
             contacts_path: Path to contacts.json file
             messages_path: Path to slack_messages.json file
             host: ArangoDB host URL
             username: ArangoDB username
             password: ArangoDB password
         """
-        self.user_id = user_id
-        self.contacts_path = contacts_path
-        self.messages_path = messages_path
+        self.db_name = db_name
+        current_dir = os.path.dirname(__file__)
+        self.contacts_path = os.path.join(current_dir, "data", "contacts.json")
+        self.messages_path = os.path.join(current_dir, "data", "slack_messages.json")
         self.host = host
         self.username = username
         self.password = password
@@ -56,12 +57,11 @@ class SlackMessagesImporter:
         client = ArangoClient(hosts=self.host)
         sys_db = client.db("_system", username=self.username, password=self.password, verify=True)
         
-        db_name = f"user_{self.user_id}"
-        if not sys_db.has_database(db_name):
-            raise Exception(f"Database '{db_name}' does not exist.")
+        if not sys_db.has_database(self.db_name):
+            raise Exception(f"Database '{self.db_name}' does not exist.")
         
-        self.db = client.db(db_name, username=self.username, password=self.password, verify=True)
-        print(f"Connected to database '{db_name}'.")
+        self.db = client.db(self.db_name, username=self.username, password=self.password, verify=True)
+        print(f"Connected to database '{self.db_name}'.")
     
     def load_contacts(self):
         """Load contacts data from JSON file."""
@@ -215,13 +215,10 @@ class SlackMessagesImporter:
 
 
 if __name__ == "__main__":
-    current_dir = os.path.dirname(__file__)
-    user_id = "1270834"  # Use the same user_id as in other migrations
+    db_name = "user_1270834"  # Use the same user_id as in other migrations
     
     importer = SlackMessagesImporter(
-        user_id=user_id,
-        contacts_path=os.path.join(current_dir, "data", "contacts.json"),
-        messages_path=os.path.join(current_dir, "data", "slack_messages.json"),
+        db_name=db_name,
         host="http://localhost:8529",
         username="root",
         password="zxcv"

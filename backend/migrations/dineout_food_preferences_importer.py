@@ -6,9 +6,11 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
 class DineoutFoodPreferencesImporter:
-    def __init__(self, data_path, db_name="my_database", host="http://localhost:8529",
+    def __init__(self, db_name="my_database", host="http://localhost:8529",
                  username="root", password="zxcv"):
-        self.data_path = data_path
+
+        current_dir = os.path.dirname(__file__)
+        self.data_path = os.path.join(current_dir, "data", "dineout_and_food_preferences.json")
         self.db_name = db_name
         self.host = host
         self.username = username
@@ -79,7 +81,7 @@ class DineoutFoodPreferencesImporter:
     def setup_db(self):
         """Establish connection and create database/graph if necessary."""
         client = ArangoClient(hosts=self.host)
-        sys_db = client.db("_system", username=self.username, password=self.password, verify=True)
+        sys_db = client.db(username=self.username, password=self.password, verify=True)
         if not sys_db.has_database(self.db_name):
             sys_db.create_database(self.db_name)
             print(f"Database '{self.db_name}' created successfully.")
@@ -125,10 +127,9 @@ class DineoutFoodPreferencesImporter:
 if __name__ == "__main__":
     current_dir = os.path.dirname(__file__)
     importer = DineoutFoodPreferencesImporter(
-        data_path=os.path.join(current_dir, "data", "dineout_and_food_preferences.json"),
-        db_name="user_1235", # user_id
-        host="http://localhost:8529",
+        db_name="user_12345", # user_id
+        host="https://afc3138ddacc.arangodb.cloud",
         username="root",
-        password="zxcv"
+        password="Jav9ZvTdowF3q66xXEiv"
     )
     importer.run()
