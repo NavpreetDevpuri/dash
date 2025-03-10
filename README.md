@@ -1,7 +1,6 @@
 # Dash - AI-Powered Personal Agent System
 
-![Gemini_Generated_Image_omim0fomim0fomim](https://github.com/user-attachments/assets/eee7f5ca-787b-4a46-95cb-a7711f5868eb)
-
+<img src="https://github.com/user-attachments/assets/eee7f5ca-787b-4a46-95cb-a7711f5868eb" style="width:300px;" />
 
 > The future is personal agents, and Dash is one of them. It gives you an AI assistant that books restaurants, orders food, and manages communications by filtering spam and prioritizing urgent messages.
 
