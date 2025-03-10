@@ -6,6 +6,9 @@ import os
 import sys
 from arango import ArangoClient
 
+# Add project root to path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+
 from migrations.utils.graph_schema_base import GraphSchemaBase
 
 class EmailGraphSchema(GraphSchemaBase):

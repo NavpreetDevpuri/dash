@@ -62,7 +62,7 @@ class GraphSchemaBase:
             username: Username to connect with
             password: Password to connect with
         """
-        self.db = ArangoClient(database=db_name, host=host, username=username, password=password)
+        self.db = ArangoClient(hosts=host).db(db_name, username=username, password=password)
         if not self.db:
             raise Exception(f"Failed to connect to database")
 
