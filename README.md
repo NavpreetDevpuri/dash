@@ -1,8 +1,8 @@
 # Dash - AI-Powered Personal Agent System
 
-<img src="https://github.com/user-attachments/assets/eee7f5ca-787b-4a46-95cb-a7711f5868eb" style="width:300px;" />
-
 > The future is personal agents, and Dash is one of them. It gives you an AI assistant that books restaurants, orders food, and manages communications by filtering spam and prioritizing urgent messages.
+
+<img src="https://github.com/user-attachments/assets/eee7f5ca-787b-4a46-95cb-a7711f5868eb" style="width:300px;" />
 
 An AI-powered platform where each user gets their own personalized agents, designed to blend natural language conversations with dynamic knowledge graph interactions. Each user's personal agent provides a modern, real-time conversational experience while integrating advanced multi-agent reasoning, graph database querying, and automated ingestion of external data sources.
 
