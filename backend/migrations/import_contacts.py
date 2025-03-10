@@ -78,16 +78,7 @@ class ContactsImporter:
             key = self.sanitize(contact["name"])
             doc = {
                 "_key": key,
-                "name": contact["name"],
-                "email": contact.get("email", ""),
-                "phone_number": contact.get("phone_number", ""),
-                "date_of_birth": contact.get("date_of_birth", None),
-                "marriage_anniversary": contact.get("marriage_anniversary", None),
-                "relationship_type": "work",
-                "role": contact.get("role", ""),
-                "slack_email": contact.get("slack_email", ""),
-                "slack_username": contact.get("slack_username", ""),
-                "type": "contact"
+                **contact
             }
             
             # Insert contact
@@ -108,16 +99,7 @@ class ContactsImporter:
             key = self.sanitize(contact["name"])
             doc = {
                 "_key": key,
-                "name": contact["name"],
-                "email": contact.get("email", ""),
-                "phone_number": contact.get("phone_number", ""),
-                "date_of_birth": contact.get("date_of_birth", None),
-                "marriage_anniversary": contact.get("marriage_anniversary", None),
-                "relationship_type": "personal",
-                "relationship": contact.get("relationship", ""),
-                "whatsapp_number": contact.get("whatsapp_number", ""),
-                "whatsapp_username": contact.get("whatsapp_username", ""),
-                "type": "contact"
+                **contact
             }
             
             # Insert contact

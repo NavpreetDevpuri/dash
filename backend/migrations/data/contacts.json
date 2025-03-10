@@ -6,7 +6,7 @@
         "date_of_birth": "12-03-1985",
         "marriage_anniversary": "15-06-2010",
         "email": "john.doe@email.com",
-        "role": "CEO",
+        "relationship": "CEO",
         "slack_email": "john.doe@email.com",
         "slack_username": "johndoe"
       },
@@ -16,7 +16,7 @@
         "date_of_birth": "25-07-1990",
         "marriage_anniversary": "10-12-2015",
         "email": "alice.ray@email.com",
-        "role": "My Manager",
+        "relationship": "My Manager",
         "slack_email": "alice.ray@email.com",
         "slack_username": "aliceray"
       },
@@ -26,7 +26,7 @@
         "date_of_birth": "10-09-1982",
         "marriage_anniversary": "22-05-2008",
         "email": "bob.king@email.com",
-        "role": "Backend",
+        "relationship": "Backend",
         "slack_email": "bob.king@email.com",
         "slack_username": "bobking"
       },
@@ -36,7 +36,7 @@
         "date_of_birth": "30-05-1995",
         "marriage_anniversary": null,
         "email": "emma.lee@email.com",
-        "role": "Frontend",
+        "relationship": "Frontend",
         "slack_email": "emma.lee@email.com",
         "slack_username": "emmalee"
       },
@@ -46,7 +46,7 @@
         "date_of_birth": "14-02-1988",
         "marriage_anniversary": "07-08-2013",
         "email": "sam.hill@email.com",
-        "role": "QA",
+        "relationship": "QA",
         "slack_email": "sam.hill@email.com",
         "slack_username": "samhill"
       },
@@ -56,7 +56,7 @@
         "date_of_birth": "05-12-1983",
         "marriage_anniversary": "29-03-2009",
         "email": "nancy.fox@email.com",
-        "role": "HR",
+        "relationship": "HR",
         "slack_email": "nancy.fox@email.com",
         "slack_username": "nancyfox"
       },
@@ -66,7 +66,7 @@
         "date_of_birth": "22-08-1992",
         "marriage_anniversary": null,
         "email": "tom.kent@email.com",
-        "role": "DevOps",
+        "relationship": "DevOps",
         "slack_email": "tom.kent@email.com",
         "slack_username": "tomkent"
       },
@@ -76,7 +76,7 @@
         "date_of_birth": "17-06-1987",
         "marriage_anniversary": "21-07-2012",
         "email": "lily.hope@email.com",
-        "role": "Product Manager",
+        "relationship": "Product Manager",
         "slack_email": "lily.hope@email.com",
         "slack_username": "lilyhope"
       },
@@ -86,7 +86,7 @@
         "date_of_birth": "03-01-1980",
         "marriage_anniversary": null,
         "email": "jack.bond@email.com",
-        "role": "Sales",
+        "relationship": "Sales",
         "slack_email": "jack.bond@email.com",
         "slack_username": "jackbond"
       },
@@ -96,7 +96,7 @@
         "date_of_birth": "27-10-1991",
         "marriage_anniversary": "12-02-2017",
         "email": "eva.nash@email.com",
-        "role": "Marketing",
+        "relationship": "Marketing",
         "slack_email": "eva.nash@email.com",
         "slack_username": "evanash"
       }
