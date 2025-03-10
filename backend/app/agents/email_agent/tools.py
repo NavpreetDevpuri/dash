@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from app.db import get_system_db, get_user_db
 
 # Initialize Celery app
-celery_app = Celery('email_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+# celery_app = Celery('email_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 def send_email_factory(user_id: str):
     """Factory function to create a send_email tool with user_id closure"""
@@ -45,14 +45,14 @@ def send_email_factory(user_id: str):
             "date": datetime.datetime.utcnow().isoformat()
         }
         
-        # Send to Celery task for processing
-        result = celery_app.send_task(
-            "email.send_email",
-            kwargs={
-                "user_id": user_id,
-                "email_data": email_data
-            }
-        )
+        # # Send to Celery task for processing
+        # result = celery_app.send_task(
+        #     "email.send_email",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "email_data": email_data
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {email_data}")
         return f"Email sent to {', '.join(to)} with subject '{subject}'."
@@ -84,16 +84,16 @@ def reply_to_email_factory(user_id: str):
             "date": datetime.datetime.utcnow().isoformat()
         }
         
-        # Send to Celery task for processing
-        celery_app.send_task(
-            "email.generate_email_response",
-            kwargs={
-                "user_id": user_id,
-                "email_id": email_id,
-                "response_type": "reply",
-                "instructions": body
-            }
-        )
+        # # Send to Celery task for processing
+        # celery_app.send_task(
+        #     "email.generate_email_response",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "email_id": email_id,
+        #         "response_type": "reply",
+        #         "instructions": body
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {reply_data}")
         return f"Reply sent to email {email_id}."
@@ -125,16 +125,16 @@ def forward_email_factory(user_id: str):
             "date": datetime.datetime.utcnow().isoformat()
         }
         
-        # Send to Celery task for processing
-        celery_app.send_task(
-            "email.generate_email_response",
-            kwargs={
-                "user_id": user_id,
-                "email_id": email_id,
-                "response_type": "forward",
-                "instructions": additional_comment
-            }
-        )
+        # # Send to Celery task for processing
+        # celery_app.send_task(
+        #     "email.generate_email_response",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "email_id": email_id,
+        #         "response_type": "forward",
+        #         "instructions": additional_comment
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {forward_data}")
         return f"Email {email_id} forwarded to {', '.join(to)}."
@@ -163,14 +163,14 @@ def create_folder_factory(user_id: str):
             "action": "create"
         }
         
-        # Send to Celery task for processing
-        celery_app.send_task(
-            "email.process_folder_action",
-            kwargs={
-                "user_id": user_id,
-                "folder_data": folder_data
-            }
-        )
+        # # Send to Celery task for processing
+        # celery_app.send_task(
+        #     "email.process_folder_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "folder_data": folder_data
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {folder_data}")
         return f"Folder '{folder_name}' created successfully."
@@ -199,15 +199,15 @@ def move_email_factory(user_id: str):
             "action": "move"
         }
         
-        # Send to Celery task for processing
-        celery_app.send_task(
-            "email.move_email",
-            kwargs={
-                "user_id": user_id,
-                "email_id": email_id,
-                "destination_folder": destination_folder
-            }
-        )
+        # # Send to Celery task for processing
+        # celery_app.send_task(
+        #     "email.move_email",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "email_id": email_id,
+        #         "destination_folder": destination_folder
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {move_data}")
         return f"Email {email_id} moved to folder '{destination_folder}'."

@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.
 from app.db import get_system_db, get_user_db
 
 # Initialize Celery app
-celery_app = Celery('slack_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+# celery_app = Celery('slack_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 def create_channel_factory(user_id: str):
     """Factory function to create a create_channel tool with user_id closure"""
@@ -44,13 +44,13 @@ def create_channel_factory(user_id: str):
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "slack.process_channel_action",
-            kwargs={
-                "user_id": user_id,
-                "channel_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_channel_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "channel_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Channel {clean_channel_name} has been created with {len(members)} members."
@@ -81,13 +81,13 @@ def leave_channel_factory(user_id: str):
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "slack.process_channel_action",
-            kwargs={
-                "user_id": user_id,
-                "channel_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_channel_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "channel_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"You have left the channel {channel_name}."
@@ -116,13 +116,13 @@ def add_to_channel_factory(user_id: str):
             "members": members
         }
         
-        celery_app.send_task(
-            "slack.process_channel_action",
-            kwargs={
-                "user_id": user_id,
-                "channel_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_channel_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "channel_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Added {len(members)} members to channel {channel_name}."
@@ -151,13 +151,13 @@ def remove_from_channel_factory(user_id: str):
             "members": members
         }
         
-        celery_app.send_task(
-            "slack.process_channel_action",
-            kwargs={
-                "user_id": user_id,
-                "channel_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_channel_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "channel_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Removed {len(members)} members from channel {channel_name}."
@@ -186,13 +186,13 @@ def set_channel_topic_factory(user_id: str):
             "topic": topic
         }
         
-        celery_app.send_task(
-            "slack.process_channel_action",
-            kwargs={
-                "user_id": user_id,
-                "channel_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_channel_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "channel_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Set topic for channel {channel_name} to '{topic}'."
@@ -224,13 +224,13 @@ def send_message_factory(user_id: str, slack_username: str = None):
             "timestamp": datetime.datetime.now().isoformat()
         }
         
-        celery_app.send_task(
-            "slack.process_message",
-            kwargs={
-                "user_id": user_id,
-                "message_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_message",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "message_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Message sent to channel {channel}: '{message}'"
@@ -261,13 +261,13 @@ def set_status_with_time_factory(user_id: str):
             "end_time": end_time
         }
         
-        celery_app.send_task(
-            "slack.process_status_action",
-            kwargs={
-                "user_id": user_id,
-                "status_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_status_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "status_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Status set to {status_emoji} {status_text} until {end_time}."
@@ -296,13 +296,13 @@ def set_status_factory(user_id: str):
             "status_emoji": status_emoji
         }
         
-        celery_app.send_task(
-            "slack.process_status_action",
-            kwargs={
-                "user_id": user_id,
-                "status_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "slack.process_status_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "status_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Status set to {status_emoji} {status_text}."

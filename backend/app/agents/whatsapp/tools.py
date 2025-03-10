@@ -13,7 +13,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 # Initialize Celery app
-celery_app = Celery('whatsapp_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+# celery_app = Celery('whatsapp_tools', broker=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
 
 def save_contact_factory(user_id: str):
     """Factory function to create a save_contact tool with user_id closure"""
@@ -34,13 +34,13 @@ def save_contact_factory(user_id: str):
         payload = {"action": "save_contact", "name": name, "phone_number": phone_number}
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "whatsapp.process_contact",
-            kwargs={
-                "user_id": user_id,
-                "contact_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "whatsapp.process_contact",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "contact_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Contact {name} with number {phone_number} has been saved."
@@ -74,13 +74,13 @@ def send_message_factory(user_id: str, whatsapp_number: str = None):
         }
         
         # Send to Celery task for processing
-        task_result = celery_app.send_task(
-            "whatsapp.process_message",
-            kwargs={
-                "user_id": user_id,
-                "message_data": payload
-            }
-        )
+        # task_result = celery_app.send_task(
+        #     "whatsapp.process_message",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "message_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         
@@ -114,13 +114,13 @@ def create_group_factory(user_id: str):
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "whatsapp.process_group_action",
-            kwargs={
-                "user_id": user_id,
-                "group_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "whatsapp.process_group_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "group_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Group {group_name} has been created with {len(participants)} participants."
@@ -149,13 +149,13 @@ def leave_group_factory(user_id: str):
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "whatsapp.process_group_action",
-            kwargs={
-                "user_id": user_id,
-                "group_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "whatsapp.process_group_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "group_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"You have left the group {group_name}."
@@ -186,13 +186,13 @@ def add_to_group_factory(user_id: str):
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "whatsapp.process_group_action",
-            kwargs={
-                "user_id": user_id,
-                "group_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "whatsapp.process_group_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "group_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Added {len(participants)} participants to group {group_name}."
@@ -223,13 +223,13 @@ def remove_from_group_factory(user_id: str):
         }
         
         # Send to Celery task for processing
-        celery_app.send_task(
-            "whatsapp.process_group_action",
-            kwargs={
-                "user_id": user_id,
-                "group_data": payload
-            }
-        )
+        # celery_app.send_task(
+        #     "whatsapp.process_group_action",
+        #     kwargs={
+        #         "user_id": user_id,
+        #         "group_data": payload
+        #     }
+        # )
         
         print(f"TOOL EXECUTION: {payload}")
         return f"Removed {len(participants)} participants from group {group_name}."
