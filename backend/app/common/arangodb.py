@@ -185,7 +185,7 @@ class ArangoGraphQAChain(Chain):
         # Generate AQL Query #
         aql_generation_output = self.aql_generation_chain.run(
             {
-                "adb_schema": self.graph_schema,
+                "adb_schema": self.graph.schema,
                 "aql_examples": self.aql_examples,
                 "user_input": user_input,
             },
@@ -245,7 +245,7 @@ class ArangoGraphQAChain(Chain):
                 # Retry AQL Generation #
                 aql_generation_output = self.aql_fix_chain.run(
                     {
-                        "adb_schema": self.graph_schema,
+                        "adb_schema": self.graph.schema,
                         "aql_query": aql_query,
                         "aql_error": aql_error,
                     },
@@ -278,7 +278,7 @@ class ArangoGraphQAChain(Chain):
             # Interpret AQL Result #
             qa_result = self.qa_chain(
                 {
-                    "adb_schema": self.graph_schema,
+                    "adb_schema": self.graph.schema,
                     "user_input": user_input,
                     "aql_query": aql_query,
                     "aql_result": aql_result,

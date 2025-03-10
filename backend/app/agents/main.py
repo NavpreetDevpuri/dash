@@ -225,24 +225,58 @@ class MainAgent:
 
     def run_interactive(self, thread_id: str, debug=False):
         """
-        Run an interactive session with the agent.
+        Run the Slack agent in an interactive loop, allowing users to chat with the agent.
+        Press Ctrl+C to exit the loop.
         
         Args:
-            thread_id: Thread ID for conversation continuity
-            debug: Whether to print debug info
+            debug: If True, shows detailed message stream for debugging
         """
-        print("🤖 MainAgent ready! Type 'exit' to quit.")
+        import markdown
+        from rich.console import Console
+        from rich.markdown import Markdown
         
-        while True:
-            user_input = input("You: ")
-            
-            if user_input.lower() in ["exit", "quit"]:
-                print("👋 Goodbye!")
-                break
+        console = Console()
+        
+        console.print(Markdown("# AI Assistant Interactive Mode"))
+        console.print(Markdown("Type your messages below. Press Ctrl+C to exit."))
+        console.print(Markdown("---"))
+        
+        try:
+            while True:
+                user_input = input("\nYou: ")
+                if not user_input.strip():
+                    continue
+                    
+                console.print("Processing...", style="italic")
                 
-            response = self.call_llm(user_input, thread_id)
-            
-            print(f"\nAgent: {response}\n")
+                if debug:
+                    config = {"configurable": {"thread_id": thread_id}}
+                    stream_mode = "values"
+
+                    # # Check if there's an ongoing PregelTask that needs user input
+                    if safely_check_interrupts(self.agent_graph, config):
+                        inputs = Command(resume={"answer": user_input})
+                    else:
+                        inputs = {"messages": [HumanMessage(content=user_input)]}
+                    
+                    for stream in self.agent_graph.stream(inputs, config, stream_mode=stream_mode):
+                        message = stream["messages"][-1]
+                        if isinstance(message, tuple):
+                            console.print(str(message))
+                        else:
+                            message.pretty_print()
+                    
+                    response = stream["messages"][-1].content
+                else:
+                    response = self.call_llm(user_input, thread_id)
+                
+                console.print("\nAssistant:", style="bold")
+                console.print(Markdown(response))
+                
+        except KeyboardInterrupt:
+            console.print("\n\nExiting Assistant. Goodbye!", style="bold green")
+        except Exception as e:
+            console.print(f"\nAn error occurred: {str(e)}", style="bold red")
 
 if __name__ == "__main__":
     from app.common.llm_manager import LLMManager
