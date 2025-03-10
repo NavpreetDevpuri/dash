@@ -32,7 +32,7 @@ from app.agents.whatsapp.tools import (
 from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory, private_db_query_factory, text_to_nx_algorithm_for_public_db_factory
 
 # Additional imports for MainAgent
-from app.agents.foodorder.tools import place_order_factory, public_dish_search_factory
+from app.agents.foodorder.tools import place_order_factory
 from app.agents.dineout.tools import book_dineout_factory
 from app.agents.email_agent.tools import (
     send_email_factory,
@@ -165,7 +165,6 @@ class MainAgent:
             
             # Food ordering tools
             place_order_factory(user_id),
-            public_dish_search_factory(user_id, self.model, self.public_db, FOOD_PRIVATE_AQL_PROMPT),
             
             # Dineout tools
             book_dineout_factory(user_id),
