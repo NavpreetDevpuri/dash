@@ -83,7 +83,7 @@ def public_db_query_factory(model, arango_graph, aql_generation_prompt):
         allow_dangerous_requests=True,
         return_aql_result=True,
         perform_qa=False,
-        top_k=5,
+        top_k=10,
         aql_generation_prompt=aql_generation_prompt
     )
     
@@ -117,7 +117,7 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
         allow_dangerous_requests=True,
         return_aql_result=True,
         perform_qa=False,
-        top_k=5,
+        top_k=10,
         aql_generation_prompt=aql_generation_prompt
     )
     
