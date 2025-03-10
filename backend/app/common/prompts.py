@@ -52,3 +52,84 @@ PUBLIC_AQL_GENERATION_PROMPT = PromptTemplate(
     input_variables=["adb_schema", "aql_examples", "user_input"],
     template=PUBLIC_AQL_GENERATION_TEMPLATE,
 )
+
+
+NETWORKX_QA_TEMPLATE = """Task: Generate a NetworkX algorithm from a User Input.
+
+You are an expert in NetworkX and ArangoDB.
+
+You are given an `ArangoDB Schema`. It is a JSON Object containing:
+1. `Graph Schema`: Lists all Graphs within the ArangoDB Database Instance, along with their Edge Relationships.     
+
+You are also given a `User Input`. It is a natural language description of the problem you need to solve.
+
+You need to generate a NetworkX algorithm that can be used to solve the problem.
+
+You should use the `ArangoDB Schema` to generate the NetworkX algorithm.
+"""
+
+NETWORKX_GENERATION_TEMPLATE = """I have a NetworkX Graph called `G_adb`. It has the following schema: {graph_schema}
+
+I have the following graph analysis query: {user_input}.
+
+Generate the Python Code required to answer the query using the `G_adb` object.
+
+`G_adb` and `nx` are already imported.
+
+The code is executing in google colab where you can also show the graph using `nx.draw()`. Feel free to use this.
+
+Be very precise on the NetworkX algorithm you select to answer this query. Think step by step.
+
+Only assume that networkx is installed, and other base python dependencies.
+
+Always set the last variable as `FINAL_RESULT`, which represents the answer to the original query.
+
+Only provide python code that I can directly execute via `exec()`. Do not provide any instructions.
+
+Make sure that `FINAL_RESULT` stores a short & consice answer. Avoid setting this variable to a long sequence.
+
+Your code:
+""" 
+
+NETWORKX_FIX_PROMPT = """Task: Fix a NetworkX algorithm.
+
+You are an expert in NetworkX and ArangoDB.
+
+You are given a `NetworkX Algorithm`. It is a NetworkX algorithm that can be used to solve the problem.
+
+You need to fix the NetworkX algorithm.
+
+You should use the `ArangoDB Schema` to fix the NetworkX algorithm.
+
+
+NetworkX Algorithm:
+{code}
+
+Error:
+{error}
+
+ArangoDB Schema:
+{graph_schema}
+
+User Input:
+{user_input}
+
+
+Your code:
+""" 
+
+
+NETWORKX_QA_PROMPT = PromptTemplate(
+    input_variables=["adb_schema", "user_input"],
+    template=NETWORKX_QA_TEMPLATE,
+)
+
+NETWORKX_GENERATION_PROMPT = PromptTemplate(
+    input_variables=["adb_schema", "query"],
+    template=NETWORKX_GENERATION_TEMPLATE,
+)
+
+NETWORKX_FIX_PROMPT = PromptTemplate(
+    input_variables=["adb_schema", "networkx_algorithm"],
+    template=NETWORKX_FIX_PROMPT,
+)   

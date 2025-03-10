@@ -35,7 +35,8 @@ Under no circumstance should you generate an AQL Query that deletes any data wha
 
 ALWAYS DO CASE INSENSITIVE SEARCHES.
 
-Search for dishes with keywords.
+IMPORTANT: (Always search for dishes first.)
+Menus, cuisines, and cetegories are mostly for deep dives.
 
 I WANT TO GET THE FOLLOWING SCHEMA:
 {DishSchema.model_json_schema()}

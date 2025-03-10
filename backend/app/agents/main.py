@@ -6,7 +6,9 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.types import Command, interrupt
 from langgraph.checkpoint.base import BaseCheckpointSaver
-
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*LangChain.*")
 import sys
 import os
 
@@ -25,7 +27,7 @@ from app.agents.whatsapp.tools import (
     remove_from_group_factory,
 )
 
-from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory, private_db_query_factory
+from app.common.tools import public_db_query_factory, get_current_datetime, human_confirmation_factory, about_me_factory, private_db_query_factory, text_to_nx_algorithm_for_public_db_factory
 
 # Additional imports for MainAgent
 from app.agents.foodorder.tools import place_order_factory, public_dish_search_factory
@@ -181,7 +183,8 @@ class MainAgent:
             set_channel_topic_factory(user_id),
             slack_send_message_factory(user_id, slack_username),
             set_status_factory(user_id),
-            set_status_with_time_factory(user_id)
+            set_status_with_time_factory(user_id),
+            text_to_nx_algorithm_for_public_db_factory(self.model, self.public_db.db, self.public_db.db.graph("restaurants"), self.public_db.schema)
         ]
 
         return create_react_agent(
@@ -263,4 +266,4 @@ if __name__ == "__main__":
         checkpointer=memory,
         confirmation_callback=lambda x: print("Agent Asked for confirmation: ", x)
     )
-    agent.run_interactive(thread_id="1234", debug=True)
+    agent.run_interactive(thread_id=str(uuid.uuid4()), debug=True)

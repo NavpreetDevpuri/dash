@@ -20,6 +20,7 @@ def place_order_factory(user_id: str):
     def place_order(restaurant_name: str, dish_names: List[str], delivery_address: str, delivery_time: Optional[str] = None, payment_method: Optional[str] = "Credit Card", special_instructions: Optional[str] = None) -> str:
         """
         Place an order for food delivery from a restaurant.
+        And Remember that it always takes 20 minutes to deliver.
         
         Args:
             restaurant_name: The name of the restaurant to order from

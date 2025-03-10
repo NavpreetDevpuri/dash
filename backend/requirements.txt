@@ -28,3 +28,5 @@ celery
 langchain_anthropic
 langchain_google_genai
 langchain_community
+tqdm
+networkx

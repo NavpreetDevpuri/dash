@@ -1,8 +1,15 @@
 import json
+import re
 from langchain_core.tools import tool
-from app.common.arangodb import ArangoGraphQAChain
+from app.common.arangodb import ArangoGraphQAChain, ArangoNetworkxQAChain
 from langgraph.types import Command, interrupt
 from typing import Callable
+
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.common.load_arangodb_graph_to_networkx import load_arangodb_graph_to_networkx
 
 def about_me_factory(arango_graph):
     cache_me_str = None
@@ -134,95 +141,38 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
     
     return private_db_query
 
-@tool
-def text_to_nx_algorithm_to_text(query):
-    """This tool is available to invoke a NetworkX Algorithm on
-    the ArangoDB Graph. You are responsible for accepting the
-    Natural Language Query, establishing which algorithm needs to
-    be executed, executing the algorithm, and translating the results back
-    to Natural Language, with respect to the original query.
 
-    If the query (e.g traversals, shortest path, etc.) can be solved using the Arango Query Language, then do not use
-    this tool.
-    """
+def text_to_nx_algorithm_for_public_db_factory(model, db, arango_graph, graph_schema):
+    G_adb = load_arangodb_graph_to_networkx(db, arango_graph)
+    chain = ArangoNetworkxQAChain.from_llm(
+        G_adb=G_adb,
+        llm=model,
+        db=db,
+        graph=arango_graph,
+        verbose=True,
+        allow_dangerous_requests=True,
+        return_nx_result=True,
+        graph_schema=graph_schema
+    )
+    @tool
+    def text_to_nx_algorithm_for_public_db(query):
+        """
+        This tool is for public database.
+        This tool is available to invoke a NetworkX Algorithm on
+        the ArangoDB Graph. You are responsible for accepting the
+        Natural Language Query, establishing which algorithm needs to
+        be executed, executing the algorithm, and translating the results back
+        to Natural Language, with respect to the original query.
 
-    llm = ChatOpenAI(temperature=0, model_name="gpt-4o")
+        If the query (e.g traversals, shortest path, etc.) can be solved using the Arango Query Language, then do not use
+        this tool.
 
-    ######################
-    print("1) Generating NetworkX code")
+        Public database contains:
+        1. Dine-out restaurants (addresses, ratings, cuisines)
+        2. Online food ordering restaurants (menus, dishes)
+        """
 
-    text_to_nx = llm.invoke(f"""
-    I have a NetworkX Graph called `G_adb`. It has the following schema: {arango_graph.schema}
+        result = chain.invoke(query)
+        return json.dumps(result["nx_result"])
 
-    I have the following graph analysis query: {query}.
-
-    Generate the Python Code required to answer the query using the `G_adb` object.
-
-    Be very precise on the NetworkX algorithm you select to answer this query. Think step by step.
-
-    Only assume that networkx is installed, and other base python dependencies.
-
-    Always set the last variable as `FINAL_RESULT`, which represents the answer to the original query.
-
-    Only provide python code that I can directly execute via `exec()`. Do not provide any instructions.
-
-    Make sure that `FINAL_RESULT` stores a short & consice answer. Avoid setting this variable to a long sequence.
-
-    Your code:
-    """).content
-
-    text_to_nx_cleaned = re.sub(r"^```python\n|```$", "", text_to_nx, flags=re.MULTILINE).strip()
-    
-    print('-'*10)
-    print(text_to_nx_cleaned)
-    print('-'*10)
-
-    ######################
-
-    print("\n2) Executing NetworkX code")
-    global_vars = {"G_adb": G_adb, "nx": nx}
-    local_vars = {}
-
-    try:
-        exec(text_to_nx_cleaned, global_vars, local_vars)
-        text_to_nx_final = text_to_nx
-    except Exception as e:
-        print(f"EXEC ERROR: {e}")
-        return f"EXEC ERROR: {e}"
-
-        # TODO: Consider experimenting with a code corrector!
-        attempt = 1
-        MAX_ATTEMPTS = 3
-
-        # while attempt <= MAX_ATTEMPTS
-            # ...
-
-    print('-'*10)
-    FINAL_RESULT = local_vars["FINAL_RESULT"]
-    print(f"FINAL_RESULT: {FINAL_RESULT}")
-    print('-'*10)
-
-    ######################
-
-    print("3) Formulating final answer")
-
-    nx_to_text = llm.invoke(f"""
-        I have a NetworkX Graph called `G_adb`. It has the following schema: {arango_graph.schema}
-
-        I have the following graph analysis query: {query}.
-
-        I have executed the following python code to help me answer my query:
-
-        ---
-        {text_to_nx_final}
-        ---
-
-        The `FINAL_RESULT` variable is set to the following: {FINAL_RESULT}.
-
-        Based on my original Query and FINAL_RESULT, generate a short and concise response to
-        answer my query.
-        
-        Your response:
-    """).content
-
-    return nx_to_text
+    return text_to_nx_algorithm_for_public_db
