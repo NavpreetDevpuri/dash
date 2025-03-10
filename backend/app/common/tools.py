@@ -159,11 +159,9 @@ def text_to_nx_algorithm_for_public_db_factory(model, db, arango_graph, graph_sc
     @tool
     def text_to_nx_algorithm_for_public_db(query):
         """
-        This tool is for public database.
-        This tool is available to invoke a NetworkX Algorithm on
-        the ArangoDB Graph. You are responsible for accepting the
-        Natural Language Query, establishing which algorithm needs to
-        be executed, executing the algorithm.
+        This tool is for public database having Dine-out restaurants and Online food ordering restaurants dishes and all.
+        This tool is available to invoke a NetworkX Algorithm on the ArangoDB Graph. You are responsible for accepting the
+        Natural Language Query or the AQL Query or AQL Query Result, This tool will use it to write and execute the NetworkX Algorithm python code.
 
         If the query (e.g traversals, shortest path, etc.) can be solved using the Arango Query Language, then do not use
         this tool.
