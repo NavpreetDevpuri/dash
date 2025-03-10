@@ -6,3 +6,4 @@ from .import_slack_messages import SlackMessagesImporter
 from .restaurant_graph_importer import RestaurantGraphImporter
 from .whatsapp_graph_schema import WhatsAppGraphSchema
 from .slack_graph_schema import SlackGraphSchema
+from .import_me_data import ImportMeData
