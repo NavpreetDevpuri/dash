@@ -32,3 +32,4 @@ tqdm
 networkx
 markdown
 nx_arangodb
+celery[redis]
