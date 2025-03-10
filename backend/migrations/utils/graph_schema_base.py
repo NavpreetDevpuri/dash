@@ -115,7 +115,7 @@ class GraphSchemaBase:
                         
                         print(f"Added {idx_type} index on {collection_name}.{field}")
     
-    def run(self, host: str, username: str, password: str):
+    def run(self, db_name: str, host: str, username: str, password: str):
         """
         Set up the database and graph schema for a specific user.
         
@@ -124,6 +124,6 @@ class GraphSchemaBase:
             username: Username to connect with
             password: Password to connect with
         """
-        self.setup_db(host, username, password)
+        self.setup_db(db_name, host, username, password)
         self.create_indices()
         print(f"{self.graph_name} graph schema setup complete.") 
