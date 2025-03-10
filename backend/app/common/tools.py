@@ -163,13 +163,12 @@ def text_to_nx_algorithm_for_public_db_factory(model, db, arango_graph, graph_sc
         This tool is available to invoke a NetworkX Algorithm on
         the ArangoDB Graph. You are responsible for accepting the
         Natural Language Query, establishing which algorithm needs to
-        be executed, executing the algorithm, and translating the results back
-        to Natural Language, with respect to the original query.
+        be executed, executing the algorithm.
 
         If the query (e.g traversals, shortest path, etc.) can be solved using the Arango Query Language, then do not use
         this tool.
 
-        NOTE: You can also use this for visualizing the graph because it has `nx.draw()`.
+        NOTE: You can also use this for visualizing the graph because it has `nx.draw()`. That means if user ask to see graph or nodes or edges, you can use this tool to visualize it.
 
         Public database contains:
         1. Dine-out restaurants (addresses, ratings, cuisines)
