@@ -131,6 +131,8 @@ def private_db_query_factory(model, arango_graph, aql_generation_prompt):
         2. User's messages (content, sender, timestamp, etc.)
         3. User's groups (name, participants, messages, etc.)
         4. User preferences (language, timezone, etc.)
+
+        Do not use user name in this tool because those are simple contacts documents.
         
         Use case-insensitive, generic queries for better results.
 
