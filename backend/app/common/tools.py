@@ -167,6 +167,8 @@ def text_to_nx_algorithm_for_public_db_factory(model, db, arango_graph, graph_sc
         If the query (e.g traversals, shortest path, etc.) can be solved using the Arango Query Language, then do not use
         this tool.
 
+        NOTE: You can also use this for visualizing the graph because it has `nx.draw()`.
+
         Public database contains:
         1. Dine-out restaurants (addresses, ratings, cuisines)
         2. Online food ordering restaurants (menus, dishes)
