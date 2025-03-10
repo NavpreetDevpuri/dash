@@ -5,6 +5,10 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.types import Command, interrupt, PregelTask
+from rich.console import Console
+from rich.markdown import Markdown
+
+console = Console()
 
 import sys
 import os
@@ -215,7 +219,7 @@ if __name__ == "__main__":
         model=LLMManager.get_openai_model(model_name="gpt-4o"),
         private_db=private_db,
         public_db=public_db,
-        confirmation_callback=lambda x: print("Agent Asked for confirmation: ", x)
+        confirmation_callback=lambda x: console.print(f"\nAgent Asked for confirmation: \n{Markdown(x)}")
     )
 
     agent.run_interactive(thread_id="123", debug=True)

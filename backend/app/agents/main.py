@@ -7,6 +7,10 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.types import Command, interrupt
 from langgraph.checkpoint.base import BaseCheckpointSaver
 import warnings
+from rich.console import Console
+from rich.markdown import Markdown
+console = Console()
+
 # Ignore all warnings
 warnings.filterwarnings("ignore")
 
@@ -230,11 +234,6 @@ class MainAgent:
         Args:
             debug: If True, shows detailed message stream for debugging
         """
-        import markdown
-        from rich.console import Console
-        from rich.markdown import Markdown
-        
-        console = Console()
         
         console.print(Markdown("# AI Assistant Interactive Mode"))
         console.print(Markdown("Type your messages below. Press Ctrl+C to exit."))
@@ -299,6 +298,6 @@ if __name__ == "__main__":
         private_db=private_db,
         public_db=public_db,
         checkpointer=memory,
-        confirmation_callback=lambda x: print("Agent Asked for confirmation: ", x)
+        confirmation_callback=lambda x: console.print(f"\nAgent Asked for confirmation: \n{Markdown(x)}")
     )
     agent.run_interactive(thread_id=str(uuid.uuid4()), debug=True)
