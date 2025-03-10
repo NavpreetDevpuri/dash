@@ -68,7 +68,9 @@ You need to generate a NetworkX algorithm that can be used to solve the problem.
 You should use the `ArangoDB Schema` to generate the NetworkX algorithm.
 """
 
-NETWORKX_GENERATION_TEMPLATE = """I have a NetworkX Graph called `G_adb`. It has the following schema: {graph_schema}
+NETWORKX_GENERATION_TEMPLATE = """Task: Generate Python code using NetworkX to analyze a graph.
+
+I have a NetworkX Graph called `G_adb`. It has the following schema: {graph_schema}
 
 I have the following graph analysis query: {user_input}.
 
@@ -86,10 +88,14 @@ Always set the last variable as `FINAL_RESULT`, which represents the answer to t
 
 Only provide python code that I can directly execute via `exec()`. Do not provide any instructions.
 
-Make sure that `FINAL_RESULT` stores a short & consice answer. Avoid setting this variable to a long sequence.
+Make sure that `FINAL_RESULT` stores a short & concise answer. Avoid setting this variable to a long sequence.
+
+Return the code wrapped in 3 backticks (```).
+Do not include any text except the generated Python code.
+Do not provide explanations or apologies in your responses.
 
 Your code:
-""" 
+"""
 
 NETWORKX_FIX_PROMPT = """Task: Fix a NetworkX algorithm.
 
