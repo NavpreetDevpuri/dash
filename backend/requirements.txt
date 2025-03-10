@@ -31,3 +31,4 @@ langchain_community
 tqdm
 networkx
 markdown
+nx_arangodb
