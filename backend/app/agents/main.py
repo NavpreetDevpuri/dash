@@ -120,7 +120,7 @@ class MainAgent:
             - When placing food orders: "I've ordered [dishes] from [restaurant] to be delivered to [address]"
             - When managing contacts/channels/folders: "I've created/modified [item] with [details]"
 
-            * For any action that requires sending something (email, message, order, etc.), use the human_confirmation tool to confirm with the user before proceeding, unless they've already confirmed it.
+            * For any action that requires sending something (email, message, order, etc.), use the human_confirmation tool to confirm with the user before proceeding.
             * When requesting confirmation, clearly state what you're about to send: "I'm about to send this email to [recipient] with subject [subject]" or "I'm about to place this order for [items] from [restaurant]".
             * Always fill in all details completely, avoiding template placeholders like [Your Name] or [Company Name]. Try to find this information from the database or ask the user directly if needed.
             
