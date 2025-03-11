@@ -107,6 +107,9 @@ You need to fix the NetworkX algorithm.
 
 You should use the `ArangoDB Schema` to fix the NetworkX algorithm.
 
+Return the code wrapped in 3 backticks (```).
+Do not include any text except the generated Python code.
+Do not provide explanations or apologies in your responses.
 
 NetworkX Algorithm:
 {code}

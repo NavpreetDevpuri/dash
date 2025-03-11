@@ -40,9 +40,9 @@ def human_confirmation_factory(query_callback: Callable):
     @tool
     def human_confirmation(query: str) -> str:
         """
-        Use this tool to request human confirmation before performing actions. Always confirm before
-        sending content, including all details about what, to whom, and the exact content. If the user
-        suggests changes, request confirmation again with the updated content.
+        Use this tool to request human confirmation before performing actions. Always ask for explicit
+        confirmation before sending content, including all details about what, to whom, and the exact content. 
+        If the user suggests changes, always ask for confirmation again with the updated content.
         
         Args:
             query: String with action details including:

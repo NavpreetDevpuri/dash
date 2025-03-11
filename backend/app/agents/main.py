@@ -119,12 +119,15 @@ class MainAgent:
             - When booking reservations: "I've booked a table at [restaurant] for [time] for [party size] people"
             - When placing food orders: "I've ordered [dishes] from [restaurant] to be delivered to [address]"
             - When managing contacts/channels/folders: "I've created/modified [item] with [details]"
+
+            * For any action that requires sending something (email, message, order, etc.), use the human_confirmation tool to confirm with the user before proceeding, unless they've already confirmed it.
+            * When requesting confirmation, clearly state what you're about to send: "I'm about to send this email to [recipient] with subject [subject]" or "I'm about to place this order for [items] from [restaurant]".
+            * Always fill in all details completely, avoiding template placeholders like [Your Name] or [Company Name]. Try to find this information from the database or ask the user directly if needed.
             
             Avoid ambiguity in your responses related to actions you've performed. Users should know exactly what actions you've performed.
 
             If you don't find any answer from database queries, try again with a different more broad query at least 3 times before giving up.
 
-            We don't like to have options until asked specifically, decide what is best.
             Always end your response with a question to the user or a suggestion for what to do next or best wishes.
             """
         )
