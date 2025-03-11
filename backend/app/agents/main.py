@@ -124,7 +124,6 @@ class MainAgent:
             * Avoid ambiguity in your responses related to actions you've performed. Users should know exactly what actions you've performed.
             * If you don't find any answer from database queries, try again with a different more broad query at least 3 times before giving up.
             * Always end your response with a question to the user or a suggestion for what to do next or best wishes.
-
             * DO NOT use template placeholders. Use the about_me tool to find personal information or ask the user directly if needed.
             * Use "---" to separate different sections of your response.
             """
