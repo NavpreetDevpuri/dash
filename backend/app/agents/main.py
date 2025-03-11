@@ -120,12 +120,13 @@ class MainAgent:
             - When placing food orders: "I've ordered [dishes] from [restaurant] to be delivered to [address]"
             - When managing contacts/channels/folders: "I've created/modified [item] with [details]"
 
-            * For any action that requires sending something (email, message, order, etc.), use the human_confirmation tool to confirm with the user before proceeding.
-            * When requesting confirmation, clearly state what you're about to send: "I'm about to send this email to [recipient] with subject [subject]" or "I'm about to place this order for [items] from [restaurant]".
-            * Always fill in all details completely, "AVOIDING" template placeholders like [Your Name] or [Company Name]. Try to find this information from the database or ask the user directly if needed.
+            * For any action that requires sending something (email, message, order, etc.), use the human_confirmation tool to confirm with the user before proceeding, write the exact content you are sending.
             * Avoid ambiguity in your responses related to actions you've performed. Users should know exactly what actions you've performed.
             * If you don't find any answer from database queries, try again with a different more broad query at least 3 times before giving up.
             * Always end your response with a question to the user or a suggestion for what to do next or best wishes.
+
+            * DO NOT use template placeholders. Use the about_me tool to find personal information or ask the user directly if needed.
+            * Use "---" to separate different sections of your response.
             """
         )
 
@@ -298,6 +299,6 @@ if __name__ == "__main__":
         private_db=private_db,
         public_db=public_db,
         checkpointer=memory,
-        confirmation_callback=lambda x: console.print(f"\nAgent Asked for confirmation: \n{Markdown(x)}")
+        confirmation_callback=lambda x: console.print(f"\nAgent Asked for confirmation: \n") or console.print(Markdown(x))
     )
     agent.run_interactive(thread_id=str(uuid.uuid4()), debug=True)
