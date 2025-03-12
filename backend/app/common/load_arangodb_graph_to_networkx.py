@@ -8,6 +8,7 @@ from tqdm import tqdm
 def load_arangodb_graph_to_networkx(db: StandardDatabase, arango_graph: Graph) -> nx.DiGraph:
     # Create a directed NetworkX graph.
     # Change to nx.Graph() if your graph is undirected.
+    print(f"Loading ArangoDB graph '{arango_graph.name}' to NetworkX...")
     G = nx.DiGraph()
     
     # --- Define helper functions to load vertices and edges ---
